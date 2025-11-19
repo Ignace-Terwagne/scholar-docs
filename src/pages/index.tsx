@@ -12,12 +12,12 @@ export default function Home() {
 
   return (
     <Layout
-      title={`${siteConfig.title} Docs`}
+      title={`${siteConfig.title}`}
       description="Gratis, niet-commerciële documentatie.">
       <header className={clsx('hero hero--primary', styles.heroBanner)}>
         <div className="container">
           <Heading as="h1" className="hero__title">
-            {siteConfig.title} Docs
+            {siteConfig.title}
           </Heading>
           <p className="hero__subtitle">
             Gratis te gebruiken, niet-commercieel.

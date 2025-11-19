@@ -37,8 +37,8 @@ export default function Home() {
       Hey!<br /><br />
       Als je deze documentatie gevonden hebt, hoop ik dat je er zeker iets aan hebt.
       Je zal voorlopig nog niet zoveel zien staan, maar geleidelijk aan zullen hier
-      alle onderdelen van de cursussen <strong>Web Frameworks</strong> en <strong>Python</strong>
-      in komen te staan.
+      alle onderdelen van de cursussen <strong>Web Frameworks</strong> en <strong>Python </strong>
+       in komen te staan.
     </p>
     <p>
       Deze documentatie biedt meer uitleg bij de verschillende onderdelen, en kan

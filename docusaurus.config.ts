@@ -15,10 +15,10 @@ const config: Config = {
   },
 
   // Set the production url of your site here
-  url: 'https://ignace-terwagne.github.io',
+  url: 'https://docs.thecodingverse.be',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/scholar-docs/',
+  baseUrl: '/',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -70,7 +70,7 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'AP Docs',
+      title: 'The Codingverse Docs',
       logo: {
         alt: 'My Site Logo',
         src: 'img/logo.svg',
@@ -80,8 +80,9 @@ const config: Config = {
           type: 'docSidebar',
           sidebarId: 'docsSidebar',
           position: 'left',
-          label: 'web frameworks',
-        },
+          label: 'Documentatie',
+        }
+
       ],
     },
     footer: {

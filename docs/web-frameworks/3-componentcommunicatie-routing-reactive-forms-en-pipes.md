@@ -55,8 +55,8 @@ export class Profiel {
 ```
 
 Uitleg:
-- De `Kaart`-component heeft een variabele `gebruiker` en een `avatarUrl`.
-- Via `[naam]="gebruikers"` wordt de naam doorgegeven aan het `Profiel`-component.
+- De `Kaart`-component heeft een variabele `gebruiker`
+- Via `[naam]="gebruiker"` wordt de naam doorgegeven aan het `Profiel`-component.
 - In `Profiel` wordt `@Input() naam` gebruikt om de waarde te ontvangen en in de template te tonen.
 - Property binding `[src]="avatarUrl"` en `[alt]="gebruiker"` zorgt ervoor dat het `<img>`-element automatisch de juiste waarden krijgt.
 
@@ -115,35 +115,47 @@ Uitleg:
 - Het `Profiel`-component heeft een `@Output()` property genaamd `naamGewijzigd`, gekoppeld aan een `EventEmitter`.
 - Wanneer de knop wordt aangeklikt, roept `veranderNaam()` `naamGewijzigd.emit()` aan met de nieuwe waarde `'Jane'`.
 - De parent `Kaart` luistert naar dit event via `(naamGewijzigd)="updateGebruiker($event)"`.
+- Het `$event` bevat precies de waarde die door `emit()` werd verstuurd.
 - De functie `updateGebruiker()` ontvangt de nieuwe naam en past de variabele `gebruiker` aan.
-Dankzij Angular's reactiviteit wordt de UI autoamtisch bijgewerkt en zie je direct de nieuwe naam in het `<p>`-element.
+Dankzij Angular's reactiviteit wordt de UI automatisch bijgewerkt en zie je direct de nieuwe naam in het `<p>`-element.
 
 ### Two-way binding tussen parent en child
-Two-way binding laat een parentcomponent en childcomponent automatisch hun waarden synchroniseren. In Angular 20 kan dit met property (`@Input`) en event (`@Output`) binding.
-
-Voor een eenvoudig voorbeeld gebruiken we een `Kaart`-component die een naam bijhoudt en via een child-component kan wijzigen:
+Two-way binding laat een parentcomponent en childcomponent automatisch hun waarden synchroniseren.
+Angular doet dit door:
+- Een `@Input()` te gebruiken voor de huidige waarde
+- Een `@Output()[naam]Change` te gebruiken voor de wijzigingen
+- De parent gebruikt `[(naam)]="property"` voor automatische synchronisatie
+Dit patroon vervangt dus de handmatige combinatie van `[property]` en `(propertyChanged)` waarbij property binding en event binding apart gekoppeld moeten worden..
 
 ```ts
 // src/app/profiel/profiel.ts
-import { Component, Output, EventEmitter } from '@angular/core';
+import { Component, Input, Output, EventEmitter } from '@angular/core';
 
 @Component({
   selector: 'app-profiel',
   templateUrl: './profiel.html'
 })
 export class Profiel {
-  @Output() naamGewijzigd = new EventEmitter<string>();
+  @Input() naam!: string;
+  @Output() naamChange = new EventEmitter<string>();
 
   veranderNaam() {
-    this.naamGewijzigd.emit('Jane');
+    this.naamChange.emit('Jane');
   }
 }
 ```
 ```html
 <!-- src/app/profiel/profiel.html -->
 <h3>Profiel component</h3>
+<p>Naam: {{ naam }}</p>
 <button (click)="veranderNaam()">Verander naam</button>
 ```
+Uitleg:
+  - `@Input() naam` ontvangt de waarde van de parent
+  - `@Output() naamChange` stuurt de nieuwe waarde terug
+  - Angular detecteert automatisch dat dit samen een **two-way binding pair** vormt.
+
+In het parentcomponent zien we dan het volgende:
 ```ts
 // src/app/kaart/kaart.ts
 import { Component } from '@angular/core';
@@ -152,31 +164,29 @@ import { Profiel } from '../profiel/profiel';
 @Component({
   selector: 'app-kaart',
   imports: [Profiel],
-  templateUrl: './kaart.html',
-  styleUrl: './kaart.css',
+  templateUrl: './kaart.html'
 })
-
 export class Kaart {
   gebruiker = "John";
-
-  updateGebruiker(nieuweNaam: string) {
-    this.gebruiker = nieuweNaam;
-  }
 }
 ```
 ```html
 <!-- src/app/kaart/kaart.html -->
 <h2>Kaart Component</h2>
+
+<!-- Two-way binding -->
+<app-profiel [(naam)]="gebruiker"></app-profiel>
+
 <p>Huidige gebruiker: {{ gebruiker }}</p>
-<app-profiel (naamGewijzigd)="updateGebruiker($event)"></app-profiel>
 ```
 Uitleg:
-- Het child-component `Profiel` heeft een `@Output()` property genaamd `naamGewijzigd`, gekoppeld aan een `EventEmitter<string>`.
-- In de functie `veranderNaam()` wordt `naamGewijzigd.emit('Jane')` aangeroepen wanneer de knop in de template wordt geklikt.
-- Het parent-component `Kaart` luistert naar dit event met `(naamGewijzigd)="updateGebruiker($event)"`.
-- De functie `updateGebruiker()` ontvangt de nieuwe waarde en past de componentvariabele `gebruiker` aan.
-- Dankzij Angular's reactiviteit wordt de UI automatisch bijgewerkt en zie je direct de nieuwe naam in het `<p>`-element.
+- `[(naam)]="gebruiker"` betekent:
+  - Stuur `gebruiker`naar child via `@Input() naam`
+  - Ontvang wijzigingen van `naamChange` en stel `gebruiker` direct in op de nieuwe waarde van naam.
 
+:::warning[Belangrijk]
+Het `Change`-gedeelte van `naamChange` is essentieel. Angular gebruikt deze suffix om automatisch te bepalen naar welk event het moet luisteren bij two-way binding. Wanneer je `[(naam)]` gebruikt, plakt Angular achterliggend zelf `"Change"` achter de variabelenaam en zoekt dus naar een event met de naam `naamChange`. Bestaat die Output niet, dan werkt two-way binding niet. Daarom moet elke two-way binding bestaan uit een `@Input()` met een bepaalde naam en een `@Output()` met dezelfde naam gevolgd door `Change`.
+:::
 ### Event payloads
 Een `@Output` kan veel meer doorgeven dan alleen een string of een getal. Vaak wordt een heel object doorgestuurd, bijvoorbeeld een geselecteerd product of een formulierveld.
 

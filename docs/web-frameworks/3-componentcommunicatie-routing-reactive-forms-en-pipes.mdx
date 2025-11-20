@@ -3,6 +3,8 @@ id: wf-theo-3
 title: 3. Componentcommunicatie, Routing, Reactive Forms en Pipes
 sidebar_label:  3. Componentcommunicatie, Routing, Reactive Forms en Pipes
 ---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
 
 ## 1. Componentcommunicatie
 :::note
@@ -298,6 +300,7 @@ Uitleg:
 - `ngOnChanges` detecteert deze verandering en voert de logica uit (bijvoorbeeld logging of interne updates).  
 - Dankzij Angular’s reactiviteit wordt de UI automatisch bijgewerkt met de nieuwe naam.
 
+## 2. Routing in Angular 20
 Angular-apps zijn **Single Page Applications (SPA).**. Dat betekent dat er één HTML-pagina geladen wordt en dat de content dynamisch wordt aangepast zonder dat de pagina volledig herladen wordt. Routing in Angular is het mechanisme waarmee je verschillende componenten toont op basis van de URL. De Router beheert hiervoor twee dingen: welke component gekoppeld zijn aan welke routes en hoe je navigeert tussen deze componenten.
 
 Routing bestaat uit drie belangrijke onderdelen in de code:
@@ -316,13 +319,15 @@ import { Profiel } from './profiel/profiel';
 
 export const appRoutes: Routes = [
   { path: '', component: Home },
-  { path: 'profiel/:id', component: Profiel }
+  { path: 'profiel', component: Profiel }
 ];
 ```
+Hier zien we dat:
+- het pad `''` (de lege string) verwijst naar de homepagina
+- het pad `'profiel'` verwijst naar het `Profiel`-component
+Op basis van de URL bepaalt Angular welk component getoond moet worden.
 
-Hier zien we dat de lege string `''` verwijst naar de homepagina. De tweede route is een dynamische route: `/profiel/:id`. Het deel `:id` is een **route paramter** die je in de component kan uitlezen. Zo kan één component meerdere profielen tonen, afhankelijk van het id in de URL.
-
-#### Applicatieconfiguratie
+### Applicatieconfiguratie
 In `app.config.ts` worden providers gedefinieerd die beschikbaar zijn in de volledige toepassing. Bij Angular 20 zijn er standaard providers aanwezig die de meeste projecten zonder extra instellingen gebruiken. De router wordt hier via `provideRouter()` geactiveerd.
 
 ```ts
@@ -354,13 +359,21 @@ import { appConfig } from './app.config';
 bootstrapApplication(AppComponent, appConfig)
   .catch(err => console.error(err));
 ```
+
 ### Navigeren binnen de applicatie
 In de templates van je componenten werk je met `routerLink` om de gebruiker naar een andere toue te laten gaan. Dit gebeurt declaratief, zonder extra TypeScript-code. Om verder te gaan met het voorbeeld van eerder, zou dit een link kunnen zijn in je `Home`-component:
 ```html
 <!-- src/app/home/home.html -->
-<a routerLink="/profiel/42">Ga naar profiel</a>
+<a routerLink="/profiel">Ga naar profiel</a>
 ```
-> In dit voorbeeld vullen we `id` rechtstreeks in met het getal `42`. In de realiteit zal ook dit deel dynamisch ingevuld worden.
+`routerLinkActive="active"` voegt automatisch de klasse active toe aan het element zodra de gebruiker zich op de betreffende pagina bevindt. Zo kan je links aanduiden met eigen CSS.
+```html
+<!-- src/app/app.html -->
+<nav>
+  <a routerLink="">Home</a>
+  <a routerLink="/profiel" routerLinkActive="active">Profiel</a>
+</nav>
+```
 
 ### de router-outlet
 Aangezien dat de componenten dynamisch worden ingeladen, moeten we in de root-template `app.html` aangeven, waar de component van die specifieke router moet worden ingeladen. Dit kunnen we doen met `<router-outlet>`
@@ -371,7 +384,7 @@ Aangezien dat de componenten dynamisch worden ingeladen, moeten we in de root-te
 
 <nav>
   <a routerLink="/">Home</a>
-  <a routerLink="/profiel/1">Profiel</a>
+  <a routerLink="/profiel">Profiel</a>
 </nav>
 
 <!-- Hier wordt Home of Profiel getoond -->
@@ -392,3 +405,396 @@ export class App {
   protected readonly title = signal('mijn-angular-project');
 }
 ```
+
+### URL-parameters (route parameters)
+Soms is het nodig om een component dynamisch in te laden. Denk aan de profielpagina: we willen misschien een profiel tonen op basis van een id of naam die in de URL wordt meegegeven. Daardoor kan één enkel component verschillende profielen tonen, afhankelijk van welke waarde de gebruiker meegeeft.
+
+Om dit mogelijk te maken voegen we een route parameter toe in `app.routes.ts`.
+Dat doe je door in het pad `/:parameter` te gebruiken.
+```ts
+// src/app/app.routes.ts
+{ path: 'profiel/:id', component: Profiel }
+```
+
+Wanneer iemand naar `/profiel/15` gaat, wordt 15 doorgegeven als parameter aan het `Profiel`-component. het component kan dan zelf bepalen wat het met die id doet.
+
+#### Uitlezen in de component
+We kunnen route parameters uitlezen via de `ActivatedRoute`. Elke keer als de parameter verandert — bijvoorbeeld wanneer de gebruiker navigeert naar een ander profiel — zal de `params`-observable een nieuwe waarde doorgeven.
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel  {
+  profielId: string | null = null;
+  constructor(private route: ActivatedRoute) {
+    this.route.params.subscribe(p => {
+      // Hier kan je beschrijven wat er moet gebeuren met de id parameter
+      this.profielId = p.get('id');
+    })
+  }
+}
+```
+Om te testen dat alles werkt, kunnen we in de template van het `Profiel`-component eenvoudig de id weergeven:
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>{{ profielId }}</p>
+```
+Als je nu naar `/profiel/16` surft, zou er gewoon `16` op het scherm moeten verschijnen.
+
+### Query Parameters
+Query parameters zijn extra informatie die je aan een URL kunt toevoegen achter een vraagteken (`?`). Ze zijn niet verplicht, maar worden vaak gebruikt om een lijst te filteren, te sorteren of een pagina te bepalen.
+Voorbeeld:
+```
+/profiel?tab=instellingen&edit=true
+```
+Hier is:
+- `tab` een query parameter met de waarde `instellingen`
+- `edit` een query parameter met de waarde `true`
+
+Query parameters zijn dus gewoon naam-waarde koppels achter een `?` en gescheiden door `&`.
+
+#### Query parameters lezen in Angular
+In Angular lees je query parameters via de `ActivatedRoute` service.
+Net zoals bij andere router-informatie geeft de `queryParamMap`-observable een nieuwe waarde wanneer de parameters veranderen.
+
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel  {
+  categorie: string | null = null;
+  constructor(private route: ActivatedRoute) {
+    this.route.queryParamMap.subscribe(params => {
+      // Hier kan je beschrijven wat er moet gebeuren met de categorie query parameter
+      this.categorie = params.get('categorie');
+    })
+  }
+}
+```
+Om te testen dat alles werkt, kunnen we in de template van het Profiel-component de `categorie`-variabele weergeven:
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>categorie: {{ categorie }}</p>
+```
+Als je nu naar `/profiel?categorie=instellingen` gaat, zal de pagina `categorie: instellingen` tonen.
+
+#### Navigeren met query parameters
+Je kunt een gebruiker vanuit TypeScript naar een route sturen en tegelijk query parameters meegeven. Dit is handig bijvoorbeeld bij filters, zoekfuncties of tab-navigatie.
+```ts
+// src/app/home/home.ts
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-home',
+  imports: [],
+  templateUrl: './home.html',
+  styleUrl: './home.css',
+})
+export class Home {
+  constructor(private router: Router) {}
+
+  gaNaarInstellingen() {
+    this.router.navigate(['/profiel', 1], { queryParams: { categorie: 'instellingen' } });
+  }
+
+  gaNaarOverzicht() {
+    this.router.navigate(['/profiel', 1], { queryParams: { categorie: 'overzicht' } });
+  }
+}
+```
+> We geven in dit voorbeeld 1 mee omdat we aannemen dat we een specifieke gebruiker of profiel willen openen. In een echte applicatie zou dit dynamisch kunnen zijn, bijvoorbeeld het ID van de ingelogde gebruiker of een geselecteerd profiel uit een lijst.
+
+:::info
+Met de array-syntax `['/profiel', 1]` wordt Angular automatisch geïnformeerd dat `1` een apart route-segment is, wat correct gekoppeld wordt aan de route `profiel/:id` in `app.routes.ts`. Tegelijkertijd voegen we met queryParams extra informatie toe, zoals de categorie (`instellingen` of `overzicht`) die in de component gebruikt kan worden om specifieke inhoud te tonen.
+:::
+
+In dit voorbeeld zouden we nu de template kunnen aansturen met buttons:
+```html
+<!-- src/app/home/home.html -->
+<h2>Home</h2>
+
+<button (click)="gaNaarInstellingen()">Instellingen</button>
+<button (click)="gaNaarOverzicht()">Overzicht</button>
+```
+uitleg:
+- `this.router.navigate()` navigeert programmatisch naar een andere router.
+- Het object `{ queryParams: {categorie: 'instellingen' } }` voegt query parameters toe aan de URL.
+- In het `Profiel`-component wordt deze query parameter opgepikt via `ActivatedRoute.queryParamMap` (zoals we eerder hebben gezien) en kan gebruikt worden om bijvoorbeeld de juiste tab of sectie te tonen.
+
+Als je nu op *Instellingen* klikt, wordt de URL `/profiel/1?categorie=instellingen` en in het `Profiel`-component wordt `this.categorie` automatisch bijgewerkt naar `"instellingen"`. Op dezelfde manier wordt bij *Overzicht* de query parameter `"overzicht"` doorgegeven en weergegeven
+
+:::warning[belangrijk]
+de component hoeft zelf niet opnieuw te worden geladen; dankzij de `queryParamMap`-observable detecteert Angular de verandering en kan je er dynamisch op reageren, bijvoorbeeld door een andere tab te tonen of content te filteren.
+:::
+
+### Route Guards
+Route Guards in Angular bepalen of een gebruiker toegang mag krijgen tot een route. Ze worden vaak gebruikt voor:
+- **authenticatie:** alleen ingelogde gebruikers mogen naar bepaalde pagina's.
+- **authorisatie:** alleen gebruikers met specifieke rechten of rollen mogen bepaalde routes zien.
+- **bevestiging bij verlaten:** waarschuw de gebruiker als hij een formulier verlaat zonder op te slaan.
+
+#### Een guard genereren
+Je kunt een guard genereren via Angular CLI met het commando
+```bash
+ng generate guard
+```
+bijvoorbeeld:
+```bash
+ng generate guard guards/auth
+```
+Bij het genereren zal Angular vragen welk type guard je wilt maken:
+```bash
+$ ng generate guard guards/auth
+? Which type of guard would you like to create?
+❯◉ CanActivate
+ ◯ CanActivateChild
+ ◯ CanDeactivate
+ ◯ CanMatch
+```
+- `CanActivate`: voorkomt dat een route geladen wordt als de gebruiker geen toegang heeft.
+- `CanActivateChild`: hetzelfde als CanActivate, maar voor child-routes van een parent route.
+- `CanDeactivate`: wordt gebruikt om te voorkomen dat een gebruiker een component verlaat (bijv. waarschuwing bij niet-opgeslagen formulieren).
+- `CanMatch`: geavanceerd gebruik, bepaalt of een route überhaupt moet “matchen” met de URL.
+
+In deze cursus behandelen we enkel `CanActivate` en `CanDeactivate`.
+:::warning[belangrijk]
+een guard is geen component, maar een service die bepaalt of een route geladen mag worden of dat een gebruiker een component mag verlaten. 
+:::
+
+Nadat de component gegenereerd is krijg je een TypeScript bestand terug zoals in dit voorbeeld:
+```ts
+// src/app/guards/auth-guard.ts
+import { CanActivateFn } from '@angular/router';
+
+export const authGuard: CanActivateFn = (route, state) => {
+  return true;
+};
+```
+Standaard geeft deze guard dus altijd `true` terug.
+We gaan dit vervangen door logica om te bepalen of de gebruiker toegang heeft tot de route.
+
+uitleg:
+- `canActivateFn` is een functie die bepaalt of een route geladen mag worden.
+- `route` en `state` geven info over de route waar de gebruiker naartoe wil.
+- Door `true` of `false` terug te geven, laat je Angular de route wel of niet tonen.
+
+:::info[Oude methode]
+In oudere Angular-tutorials of documentatie zie je vaak dat `CanActivate` guards als **class-based service** worden geschreven met `@Injectable` en het `CanActivate`-interface.  
+```ts
+// src/app/guards/auth-guard.ts
+import { Injectable } from '@angular/core';
+import { CanActivate, Router } from '@angular/router';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthGuard implements CanActivate {
+
+  constructor(private router: Router) {}
+
+  canActivate(): boolean {
+    const loggedIn = false; // Hier check je bv. of de gebruiker ingelogd is
+    if (!loggedIn) {
+      // Gebruiker mag niet naar deze route → alert
+      alert("De gebruiker is niet ingelogd!")
+      }
+    return loggedIn;
+  }
+}
+```
+Deze methode gebruikt dependency injection en een class om te bepalen of een route geladen mag worden. Voorbeelden hiervan vind je in veel oudere cursussen of boeken. 
+
+Aangezien deze methode wel nog gebruikt wordt, zullen de voorbeelden telkens in de moderne variant en deze variant getoond worden.
+
+> Let op: de Angular CLI genereert tegenwoordig standaard function-based guards. Class-based guards werken nog steeds, maar de function-based methode is korter en moderner.
+:::
+
+#### `CanActivate`-guard
+Een `CanActivate` guard bepaalt of een gebruiker toegang mag krijgen tot een bepaalde route.  
+Bijvoorbeeld: alleen ingelogde gebruikers mogen naar de profielpagina.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/guards/auth-guard.ts
+  import { CanActivateFn } from '@angular/router';
+  export const authGuard: CanActivateFn = (route, state) => {
+    const loggedIn = false; // Hier check je bv. of de gebruiker ingelogd is
+    if (!loggedIn) {
+      // Gebruiker mag niet naar deze route → alert
+      alert("De gebruiker is niet ingelogd!")
+    }
+    return loggedIn;
+  };
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/guards/auth-guard.ts
+  import { Injectable } from '@angular/core';
+  import { CanActivate, Router } from '@angular/router';
+  @Injectable({
+    providedIn: 'root'
+  })
+  export class AuthGuard implements CanActivate {
+    constructor(private router: Router) {}
+    canActivate(): boolean {
+      const loggedIn = false; // Hier check je bv. of de gebruiker ingelogd is
+      if (!loggedIn) {
+        // Gebruiker mag niet naar deze route → alert
+        alert("De gebruiker is niet ingelogd!")
+    } 
+      return loggedIn;
+    }
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+Om deze guard te gebruiken, moeten we hem koppelen aan een route in `app.routes.ts`.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { authGuard } from './guards/auth-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canActivate: [authGuard] }
+
+  ]
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { AuthGuard } from './guards/auth-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canActivate: [AuthGuard] }
+
+  ]
+  ```
+  </TabItem>
+</Tabs>
+
+#### `CanDeactivate`-guard
+Een `CanDeactivate` guard voorkomt dat een gebruiker een component verlaat zonder bevestiging. Dit is handig bij formulieren waar je wilt waarschuwen voor niet-opgeslagen wijzigingen.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/guards/unsaved-changes-guard.ts
+  import { CanActivateFn } from '@angular/router';
+  export const unsavedChangesGuard: CanActivateFn = (route, state) => {
+      const unSavedChanges = true; // Hier check je of er niet-opgeslagen wijzigingen zijn
+      if (unSavedChanges) {
+        // Waarschuw de gebruiker
+        const confirmLeave = confirm("Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten?");
+        return confirmLeave;
+      }
+    return !unSavedChanges;
+  };
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/guards/unsaved-changes-guard.ts
+  import { Injectable } from '@angular/core';
+  import { CanDeactivate } from '@angular/router';
+  @Injectable({
+    providedIn: 'root'
+  })
+  export class UnsavedChangesGuard implements CanDeactivate<unknown> {
+    canDeactivate(): boolean {
+      const unSavedChanges = true; // Hier check je of er niet-opgeslagen wijzigingen zijn
+      if (unSavedChanges) {
+        // Waarschuw de gebruiker
+        const confirmLeave = confirm("Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten?");
+        return confirmLeave;
+      }
+      return !unSavedChanges;
+    }
+  }
+  ```
+  </TabItem>
+</Tabs>
+Om deze guard te gebruiken, moeten we hem koppelen aan een route in `app.routes.ts`.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { unsavedChangesGuard } from './guards/unsaved-changes-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canDeactivate: [unsavedChangesGuard] }
+  ]
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { UnsavedChangesGuard } from './guards/unsaved-changes-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canDeactivate: [UnsavedChangesGuard] }
+  ]
+  ```
+  </TabItem>
+</Tabs>
+Uitleg:
+- De `unsavedChangesGuard` controleert of er niet-opgeslagen wijzigingen zijn.
+- Als dat zo is, wordt de gebruiker gevraagd om te bevestigen of hij de pagina wil verlaten.
+- Als de gebruiker bevestigt, keert de guard `true` terug en mag de route verlaten worden; anders `false` en blijft de gebruiker op de pagina.
+
+### Lazy loading
+Lazy loading is een techniek waarbij bepaalde delen van een applicatie pas worden geladen wanneer ze daadwerkelijk nodig zijn. Dit verbetert de initiële laadtijd van de applicatie, omdat niet alle code in één keer hoeft te worden gedownload.
+
+In Angular kan je lazy loading toepassen op modules. Dit betekent dat een module (en de bijbehorende componenten, services, etc.) pas wordt geladen wanneer de gebruiker naar een route navigeert die deze module gebruikt.
+
+Stel dat we een module `AdminModule` hebben die alleen toegankelijk is voor beheerders. We kunnen deze module lazy loaden door de route als volgt te definiëren in `app.routes.ts`:
+```ts
+// src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { Home } from './home/home';
+import { Profiel } from './profiel/profiel';
+export const routes: Routes = [
+    { path: '', component: Home },
+    { path: 'profiel/:id', component: Profiel },
+    { path: 'admin', loadComponent: () => import('./admin/admin').then(m => m.Admin) }
+]
+```
+Hier wordt de `Admin`-component pas geladen wanneer de gebruiker naar de `/admin`-route navigeert. Dit gebeurt via de `loadComponent`-functie die een dynamische import uitvoert.
+
+Uitleg:
+- `loadComponent` gebruikt een functie die een promise teruggeeft.
+- De functie importeert de module dynamisch met `import()`.
+- Zodra de gebruiker naar de `/admin`-route gaat, wordt de module geladen en het `Admin`-component weergegeven.
+Dit zorgt ervoor dat de initiële laadtijd van de applicatie korter is, omdat de code voor de `Admin`-module pas wordt gedownload wanneer deze daadwerkelijk nodig is.
+
+## 3. Formulieren in Angular
+In Angular zijn er twee manieren om formulieren te maken: **template-driven** forms en **reactive forms**. In deze sectie focussen we op reactive forms.
+Reactive forms bieden meer controle en flexibiliteit bij het bouwen van complexe formulieren. Ze zijn gebaseerd op een model-gedreven benadering waarbij de formulierstructuur en validatie in TypeScript worden gedefinieerd.
+Template-driven forms zijn eenvoudiger voor kleine formulieren, maar reactive forms zijn krachtiger voor grotere en complexere formulieren.
+
+In moderne Angular-toepassingen worden reactive forms vaak aanbevolen vanwege hun schaalbaarheid en testbaarheid.

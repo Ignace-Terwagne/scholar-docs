@@ -297,3 +297,98 @@ Uitleg:
 - Wanneer de parent `Kaart` de waarde van `gebruiker` aanpast, wordt deze nieuwe waarde automatisch doorgegeven aan het child `Profiel`.  
 - `ngOnChanges` detecteert deze verandering en voert de logica uit (bijvoorbeeld logging of interne updates).  
 - Dankzij Angular’s reactiviteit wordt de UI automatisch bijgewerkt met de nieuwe naam.
+
+Angular-apps zijn **Single Page Applications (SPA).**. Dat betekent dat er één HTML-pagina geladen wordt en dat de content dynamisch wordt aangepast zonder dat de pagina volledig herladen wordt. Routing in Angular is het mechanisme waarmee je verschillende componenten toont op basis van de URL. De Router beheert hiervoor twee dingen: welke component gekoppeld zijn aan welke routes en hoe je navigeert tussen deze componenten.
+
+Routing bestaat uit drie belangrijke onderdelen in de code:
+- Routes definiëren in `app.routes.ts`
+- Applicatieconfiguratie in `app.config.ts`
+- bootstrapping in `main.ts`
+
+### Routes definiëren
+Routes worden in Angular gedefinieerd als een mapping tussen een path en een component. Stel dat we een eenvoudige applicatie hebben met een homepagina en een profielpagina. we maken dan het volgende aan in `app.routes.ts`
+
+```ts
+// src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { Home } from './home/home';
+import { Profiel } from './profiel/profiel';
+
+export const appRoutes: Routes = [
+  { path: '', component: Home },
+  { path: 'profiel/:id', component: Profiel }
+];
+```
+
+Hier zien we dat de lege string `''` verwijst naar de homepagina. De tweede route is een dynamische route: `/profiel/:id`. Het deel `:id` is een **route paramter** die je in de component kan uitlezen. Zo kan één component meerdere profielen tonen, afhankelijk van het id in de URL.
+
+#### Applicatieconfiguratie
+In `app.config.ts` worden providers gedefinieerd die beschikbaar zijn in de volledige toepassing. Bij Angular 20 zijn er standaard providers aanwezig die de meeste projecten zonder extra instellingen gebruiken. De router wordt hier via `provideRouter()` geactiveerd.
+
+```ts
+// src/app/app.config.ts
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+
+import { routes } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes)
+  ]
+};
+```
+`provideRouter(routes)` zorgt ervoor dat de router beschikbaar is in de volledige applicatie.
+De overige providers worden standaard toegevoegd door Angular voor foutafhandeling en performance-optimalisaties. Voor routing hoef je deze niet aan te passen, maar ze blijven deel uitmaken van de standaardconfiguratie.
+
+### Bootstrapping
+`main.ts` start de applicaties op. hierbij wordt het rootcomponent ingesteld en wordt de applicatieconfiguratie gebruikt om de router en andere providers in te laden.
+```ts
+// src/main.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+import { appConfig } from './app.config';
+
+bootstrapApplication(AppComponent, appConfig)
+  .catch(err => console.error(err));
+```
+### Navigeren binnen de applicatie
+In de templates van je componenten werk je met `routerLink` om de gebruiker naar een andere toue te laten gaan. Dit gebeurt declaratief, zonder extra TypeScript-code. Om verder te gaan met het voorbeeld van eerder, zou dit een link kunnen zijn in je `Home`-component:
+```html
+<!-- src/app/home/home.html -->
+<a routerLink="/profiel/42">Ga naar profiel</a>
+```
+> In dit voorbeeld vullen we `id` rechtstreeks in met het getal `42`. In de realiteit zal ook dit deel dynamisch ingevuld worden.
+
+### de router-outlet
+Aangezien dat de componenten dynamisch worden ingeladen, moeten we in de root-template `app.html` aangeven, waar de component van die specifieke router moet worden ingeladen. Dit kunnen we doen met `<router-outlet>`
+
+```html
+<!-- src/app/app.html -->
+<h1>Mijn App</h1>
+
+<nav>
+  <a routerLink="/">Home</a>
+  <a routerLink="/profiel/1">Profiel</a>
+</nav>
+
+<!-- Hier wordt Home of Profiel getoond -->
+<router-outlet></router-outlet>
+```
+Belangrijk hierbij is dat in `app.ts` ook `RouterOutlet` geïmporteerd is. Bij de standaardinitialitatie van de applicatie wordt dit automatisch gedaan.
+```ts
+// src/app/app.ts
+import { Component, signal } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+export class App {
+  protected readonly title = signal('mijn-angular-project');
+}
+```

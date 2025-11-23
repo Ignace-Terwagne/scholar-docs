@@ -1,5 +1,5 @@
 ---
-id: fundamentals
+id: wf-theo-1
 title: 1. Fundamentals van moderne webontwikkeling
 sidebar_label: 1. Fundamentals van moderne webontwikkeling
 

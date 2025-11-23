@@ -1,5 +1,5 @@
 ---
-id: intro-angular
+id: wf-theo-2
 title: 2. Introductie Angular
 sidebar_label:  2. Introductie Angular
 ---

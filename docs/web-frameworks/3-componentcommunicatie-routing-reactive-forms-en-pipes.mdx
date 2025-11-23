@@ -6,10 +6,9 @@ sidebar_label:  3. Componentcommunicatie, Routing, Reactive Forms en Pipes
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
 
+In dit hoofdstuk verdiepen we ons in essentiële Angular-concepten die de basis vormen van professionele webapplicaties. We bekijken hoe componenten met elkaar communiceren via `@Input` en `@Output`, hoe je gebruikers door je applicatie navigeert met `Angular Router`, en hoe je robuuste formulieren bouwt met `Reactive Forms`. Tot slot leren we hoe `Pipes` je helpen om data netjes en consistent weer te geven in de gebruikersinterface.
+
 ## 1. Componentcommunicatie
-:::note
-We hebben dit onderwerp in les 2 al kort bekeken. Hier herhalen we het nog even om alles goed op te frissen.
-:::
 
 Zoals we eerder al hebben gezien zijn Angular-apps volledig opgebouwd uit componenten die hiërarchisch georganiseerd zijn. Componenten moeten vaak gegevens uitwisselen: van parent naar child, van child naar parent of zelfs in beide richtingen. Angular biedt hiervoor `@Input`, `@Output` en two-way binding.
 
@@ -793,8 +792,380 @@ Uitleg:
 Dit zorgt ervoor dat de initiële laadtijd van de applicatie korter is, omdat de code voor de `Admin`-module pas wordt gedownload wanneer deze daadwerkelijk nodig is.
 
 ## 3. Formulieren in Angular
-In Angular zijn er twee manieren om formulieren te maken: **template-driven** forms en **reactive forms**. In deze sectie focussen we op reactive forms.
-Reactive forms bieden meer controle en flexibiliteit bij het bouwen van complexe formulieren. Ze zijn gebaseerd op een model-gedreven benadering waarbij de formulierstructuur en validatie in TypeScript worden gedefinieerd.
-Template-driven forms zijn eenvoudiger voor kleine formulieren, maar reactive forms zijn krachtiger voor grotere en complexere formulieren.
+Formulieren zijn essentieel voor user input, zoals bij login, registratie of checkout. Angular biedt twee manieren om formulieren te maken: template-driven forms en reactive forms. Template-driven forms werken met `ngModel` en zijn eenvoudig, maar minder krachtig en moeilijker testbaar. Reactive forms verplaatsen de logica naar TypeScript, wat ze flexibeler, schaalbaarder en beter testbaar maakt. Moderne Angular-apps gebruiken daarom meestal Reactive Forms.
 
-In moderne Angular-toepassingen worden reactive forms vaak aanbevolen vanwege hun schaalbaarheid en testbaarheid.
+### Waarom Reactive Forms?
+Reactive Forms scheiden de logica en HTML. Je hebt volledige controle over de waarden en validatie van de velden, formulieren zijn beter schaalbaar en makkelijker te testen. Voor een login-formulier betekent dit dat validatie en verwerking van e-mail en wachtwoord volledig in TypeScript kunnen gebeuren, terwijl de HTML puur declaratief blijft.
+
+### Reactive Forms opzetten
+Om Reactive Forms te gebruiken, moet je de `ReactiveFormsModule` importeren in de component waar je het formulier wilt gebruiken.
+
+```ts
+// src/app/login/login.ts
+import { Component } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-login',
+  imports: [ReactiveFormsModule],
+  templateUrl: './login.html',
+  styleUrl: './login.css',
+})
+
+export class Login {
+}
+```
+
+### FormGroup en FormControl
+In Reactive Forms gebruik je `FormControl` voor individuele velden en `FormGroup` voor een verzameling velden. Validators zorgen ervoor dat de waarden voldoen aan bepaalde regels, zoals verplicht zijn, minimumlengte of regex-checks.
+```ts
+// src/app/login/login.ts
+import { Component } from '@angular/core';
+import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
+@Component({
+  selector: 'app-login',
+  imports: [ReactiveFormsModule],
+  templateUrl: './login.html',
+  styleUrl: './login.css',
+})
+export class Login {
+
+form = new FormGroup({
+  email: new FormControl('', [Validators.required, Validators.email]),
+  password: new FormControl('', Validators.required)
+});
+
+onSubmit() {
+  console.log(this.form.value);
+}
+}
+```
+`onSubmit()` wordt aangeroepen wanneer het formulier wordt ingediend. Hier loggen we de waarden van het formulier naar de console.
+### Template koppeling
+In de HTML-template gebruik je `formGroup` om het formulier te koppelen aan de `FormGroup` in TypeScript. Elk invoerveld gebruikt `formControlName` om te verwijzen naar de bijbehorende `FormControl`.
+```html
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <label>Email</label>
+  <input type="email" formControlName="email">
+  @if (form.controls.email.invalid && form.controls.email.touched) {
+  <div>Ongeldig emailadres</div>
+  }
+  <label>Wachtwoord</label>
+  <input type="password" formControlName="password">
+  <button type="submit" [disabled]="form.invalid">Login</button>
+</form>
+```
+
+Uitleg:
+- `[formGroup]="form"` koppelt het formulier aan de `FormGroup` in TypeScript.
+- `formControlName="email"` en `formControlName="wachtwoord"` koppelen de invoervelden aan hun respectievelijke `FormControl`.
+- De validatieberichten worden getoond als het veld gefocust is (`touched`) en ongeldig (`invalid`).
+- Wanneer het event `ngSubmit` wordt getriggerd (bijvoorbeeld door op de submit-knop te klikken), wordt de `login()`-methode aangeroepen.
+
+### Validators
+Angular biedt verschillende ingebouwde validators, zoals:
+- `Validators.required`: veld is verplicht
+- `Validators.email`: veld moet een geldig e-mailadres zijn
+- `Validators.minLength(n)`/`Validators.maxLength(n)`: minimale/maximale lengte
+- `Validators.pattern(regex)`: veld moet voldoen aan een regex-patroon
+
+Daarnaast kan je ook eigen validators schrijven voor specifieke validatieregels.
+```ts
+// src/app/login/login.ts
+export function noAdmin(control: FormControl) {
+  const value = control.value as string;
+  return value && value.toLowerCase() === 'admin' ? { noAdmin: true } : null;
+}
+
+export class Login {
+  form = new FormGroup({
+    gebruikersnaam: new FormControl('', [Validators.required, noAdmin]),
+    wachtwoord: new FormControl('', Validators.required)
+  });
+}
+```
+Hier hebben we een eigen validator `noAdmin` gemaakt die controleert of de gebruikersnaam niet 'admin' is. Als dat wel zo is, retourneert de validator een foutobject `{ noAdmin: true }`, anders `null`.
+
+### Foutmeldingen
+In de template kan je foutmeldingen tonen op basis van de validatiestatus van elk veld.
+```html
+<!-- src/app/login/login.html -->
+<label>Gebruikersnaam</label>
+<input type="text" formControlName="gebruikersnaam">
+@if (form.controls.gebruikersnaam.touched && form.controls.gebruikersnaam.hasError('noAdmin')) {
+  <div>Gebruikersnaam mag niet "admin" zijn</div>
+}
+```
+Uitleg:
+- `form.controls.gebruikersnaam.touched` controleert of het veld gefocust is.
+- `form.controls.gebruikersnaam.hasError('noAdmin')` controleert of de `noAdmin`-validator een fout heeft geretourneerd.
+- Als beide waar zijn, wordt de foutmelding getoond.
+
+### FormArray
+`FormArray` is een speciale `FormGroup` die een dynamische lijst van `FormControl`- of `FormGroup`-objecten bevat. Dit is handig voor velden die meerdere waarden kunnen hebben, zoals een lijst van telefoonnummers of adressen.
+
+```ts
+// src/app/telefoonnummers/telefoonnummers.ts
+import { Component } from '@angular/core';
+import { ReactiveFormsModule, FormGroup, FormControl, FormArray, Validators } from '@angular/forms';
+@Component({
+  selector: 'app-telefoonnummers',
+  imports: [ReactiveFormsModule],
+  templateUrl: './telefoonnummers.html',
+  styleUrl: './telefoonnummers.css',
+})
+export class Telefoonnummers {
+  form = new FormGroup({
+    telefoonnummers: new FormArray([
+      new FormControl('', Validators.required)
+    ])
+  });
+  get telefoonnummers() {
+    return this.form.get('telefoonnummers') as FormArray;
+  }
+  voegTelefoonnummerToe() {
+    this.telefoonnummers.push(new FormControl('', Validators.required));
+  }
+  onSubmit() {
+    console.log(this.form.value);
+  }
+}
+```
+```html
+<!-- src/app/telefoonnummers/telefoonnummers.html -->
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div formArrayName="telefoonnummers">
+  @for (ctrl of telefoonnummers.controls; let i = index; track $index) {
+    <div>
+      <label>Telefoonnummer {{ i + 1 }}</label>
+      <input type="text" [formControlName]="i">
+    </div>
+  }
+  </div>
+  <button type="button" (click)="voegTelefoonnummerToe()">Voeg telefoonnummer toe</button>
+  <button type="submit" [disabled]="form.invalid">Verzenden</button>
+</form>
+```
+Uitleg:
+- `FormArray` wordt gebruikt om een dynamische lijst van telefoonnummer-velden te beheren.
+- De `voegTelefoonnummerToe()`-methode voegt een nieuw `FormControl` toe aan de `FormArray`.
+- In de template wordt met `formArrayName` de array gekoppeld en met een `for`-lus worden de individuele velden weergegeven.
+- De gebruiker kan meerdere telefoonnummers invoeren door op de knop te klikken.
+- Wanneer de gebruiker een telefoonnummer toevoegt, wordt er een nieuw invoerveld weergegeven.
+
+### Waarden lezen & updaten
+Je kunt de waarden uitlezen via `form.value` of individuele controls via `form.get('controlName').value`.
+```ts
+//src/app/login/login.ts
+
+onSubmit() {
+  const email = this.form.get('email')?.value;
+  const password = this.form.get('password')?.value;
+  console.log(`Email: ${email}, Wachtwoord: ${password}`);
+}
+```
+
+Om waarden bij te werken, gebruik je `setValue()` of `patchValue()`.
+```ts
+// src/app/login/login.ts
+
+this.form.setValue({
+  email: '',
+  password: ''
+})
+// of
+this.form.patchValue({
+  email: ''
+})
+```
+- `setValue()` vereist dat je alle velden bijwerkt.
+- `patchValue()` laat je toe om slechts enkele velden bij te werken.
+
+### Best practices
+
+- Hou validatie in TypeScript, niet in HTML. Definieer validators in je component class (`Validators.required`, custom validators). Dit centraliseert je logica en vergemakkelijkt testen.
+
+- Gebruik duidelijke en korte foutmeldingen. Toon specifieke errors: "E-mailadres is verplicht" is beter dan "Invalid input". Gebruik `hasError()` voor de juiste melding.
+
+- Structureer grotere formulieren. Gebruik nested `FormGroup` voor logische secties en `FormArray` voor dynamische lijsten. Dit houdt je code overzichtelijk.
+
+- Test validators apart. Custom validators zijn pure functies. Test ze los van je component voor eenvoudiger debugging.
+
+- Schakel submit-knop uit bij ongeldig formulier. Gebruik `[disabled]="!form.valid"` om ongeldige submissions te voorkomen en gebruikers direct feedback te geven.
+
+
+## 4. Pipes in Angular
+Pipes worden in Angular gebruikt om waarden te formatteren of te veranderen rechtstreeks in de template. Ze zorgen ervoor dat je geen presentatielogica in je component moet zetten. Daardoor blijft je code overzichtelijk en kan de template zelf de opmaak regelen.
+
+### Wat zijn Pipes?
+Pipes voeren een transformatie uit op een waarde. Ze hebben altijd dezelfde vorm:
+```html
+{{ waarde | pipeNaam:argument1:argument2 }}
+```
+Hierbij is:
+- `waarde`: de inputwaarde die je wilt transformeren
+- `pipeNaam`: de naam van de pipe die je wilt gebruiken
+- `argument1`, `argument2`: optionele extra parameters die je aan de pipe kunt doorgeven
+Je kan pipes combineren (chaining):
+```html
+{{ waarde | pipe1 | pipe2:arg1 }}
+```
+
+### Ingebouwde Pipes
+Angular biedt verschillende ingebouwde pipes voor veelvoorkomende transformaties, zoals:
+- `date`: formatteert datums
+- `uppercase` / `lowercase`: zet tekst om naar hoofdletters of kleine letters
+- `titlecase`: zet de eerste letter van elk woord in hoofdletters
+- `number`: Europese notatie voor getallen
+- `currency`: formatteert getallen als valuta
+- `percent`: formatteert getallen als percentage
+
+#### `date`-pipe
+```html
+<p>Vandaag is {{ today | date:'fullDate' }}</p>
+<p>Vandaag is {{ today | date: 'dd/MM/yyyy' }}</p>
+<p>De tijd is {{ now | date: 'HH:mm' }}</p>
+<p>De tijd is {{ now | date: 'dd/MM/yyyy, HH:mm zzzz' }}</p>
+```
+Uitleg:
+- `fullDate`: toont de volledige datum in een leesbaar formaat
+- `dd/MM/yyyy`: toont de datum in dag/maand/jaar-formaat
+- `HH:mm`: toont alleen het uur en de minuten in 24-uurs formaat
+- `dd/MM/yyyy, HH:mm zzzz`: toont datum, tijd en tijdzone
+
+#### `uppercase`- en `lowercase`-pipes
+```html
+<p>Hoofdletters: {{ naam | uppercase }}</p>
+<p>Kleine letters: {{ naam | lowercase }}</p>
+```
+Uitleg:
+- `uppercase`: zet alle letters in hoofdletters
+- `lowercase`: zet alle letters in kleine letters 
+
+#### `currency`-pipe
+```html
+<p>Prijs: {{ prijs | currency:'EUR':'symbol':'1.2-2' }}</p>
+<p>Prijs: {{ prijs | currency:'USD':'code':'1.0-0' }}</p>
+```
+Uitleg:
+- `'EUR'` en `'USD'`: de valuta die je wilt gebruiken
+- `'symbol'` toont het valutateken (€ of $), `'code'` toont de valutacode (EUR of USD)
+- `'1.2-2'` betekent minimaal 1 cijfer voor de komma, minimaal 2 en maximaal 2 cijfers na de komma (dus exact 2 decimalen)
+- `'1.0-0'` betekent minimaal 1 cijfer voor de komma en geen cijfers na de komma (hele getallen)
+
+#### `percent`-pipe
+```html
+<p>Percentage: {{ ratio | percent:'1.0-2' }}</p>
+```
+Uitleg:
+- `ratio` is een decimaal getal (bijv. 0.25 voor 25%)
+- `'1.0-2'` betekent minimaal 1 cijfer voor de komma, minimaal 0 en maximaal 2 cijfers na de komma
+
+### Locale en Europese Context
+Standaard gebruikt Angular de Amerikaanse notatie voor datums en getallen. Om Europese notatie te gebruiken, moet je de juiste locale instellen in je applicatie. Je zou dit kunnen instellen op elke pipe, maar het is handiger om dit te doen in `app.config.ts` zodat het voor de hele applicatie geldt. Hier voegen we dit toe aan de providers:
+```ts
+// src/app/app.config.ts
+//highlight-next-line
+import { ApplicationConfig, LOCALE_ID, DEFAULT_CURRENCY_CODE} from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+//highlight-start
+import { registerLocaleData } from '@angular/common';
+import localeNLBE from '@angular/common/locales/nl-BE';
+
+registerLocaleData(localeNlBE);
+//highlight-end
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes)
+    //highlight-start
+    { provide: LOCALE_ID, useValue: 'nl-BE' },
+    { provide: DEFAULT_CURRENCY_CODE, useValue: 'EUR' }
+    //highlight-end
+  ]
+};
+```
+
+Hiermee stel je de locale in op Nederlands (België) en de standaardvaluta op Euro. Hierdoor zullen alle pipes die datums of valuta formatteren automatisch de juiste notatie gebruiken zonder dat je dit telkens hoeft te specificeren in elke pipe. Doordat deze configuratie wordt gebootstrapped in `main.ts`, geldt dit voor de hele applicatie.
+
+Nu kan je in je templates gewoon de pipes gebruiken zonder telkens de locale of valuta te hoeven specificeren:
+```html
+<p>Vandaag is {{ today | date:'fullDate' }}</p>
+<p>Prijs: {{ prijs | currency:'symbol':'1.2-2' }}</p>
+``` 
+### Custom Pipes
+Je kunt ook je eigen pipes maken voor specifieke transformaties die niet door de ingebouwde pipes worden gedekt. Dit doe je met het commando `ng generate pipe`, bijvoorbeeld:
+```bash
+ng generate pipe omgekeerd
+```
+```ts
+// src/app/pipes/omgekeerd-pipe.ts
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'omgekeerd'
+})
+export class OmgekeerdPipe implements PipeTransform {
+
+  transform(value: unknown, ...args: unknown[]): unknown {
+    if (typeof value === 'string') {
+      return value.split('').reverse().join('');
+    }
+    return value;
+  }
+
+}
+```
+Uitleg:
+- `@Pipe` decorator definieert een nieuwe pipe met de naam `omgekeerd
+- `PipeTransform` interface vereist dat je een `transform`-methode implementeert
+- In `transform` controleren we of de waarde een string is en keren we deze om met `split`, `reverse` en `join`.
+
+Om de pipe nu te gebruiken in een component, moet je ervoor zorgen dat de pipe is opgenomen in de `imports` van dat component:
+```ts
+// src /app/product/product.ts
+import { Component } from '@angular/core';
+import { OmgekeerdPipe } from '../pipes/omgekeerd-pipe';
+@Component({
+  selector: 'app-product',
+  imports: [OmgekeerdPipe],
+  templateUrl: './product.html',
+  styleUrl: './product.css',
+})
+export class Product {
+  naam = 'John Doe';
+}
+```
+Je kunt deze pipe nu gebruiken in je templates:
+```html
+<!-- src/app/product/product.html -->
+<p>Omgekeerde naam: {{ naam | omgekeerd }}</p>
+```
+
+Een tweede voorbeeld van een custom pipe is een formatter voor IBAN-nummers:
+```ts// src/app/pipes/iban-pipe.ts
+import { Pipe, PipeTransform } from '@angular/core';
+@Pipe({
+  name: 'iban'
+})
+export class IbanPipe implements PipeTransform {
+  transform(value: string): string {
+    if (!value) return value;
+    return iban.replace(/\s+/g, '').match(/.{1,4}/g)?.join(' ') || value;
+}
+}
+```
+Uitleg:
+- De `IbanPipe` verwijdert eerst alle spaties uit het IBAN-nummer
+- Vervolgens wordt het nummer in groepen van 4 tekens verdeeld met een regex en weer samengevoegd met spaties
+- Dit maakt het IBAN-nummer leesbaarder
+
+```html
+<p>IBAN: {{ ibanNummer | iban }}</p>
+```
+Hiermee wordt het IBAN-nummer netjes in groepen van vier tekens weergegeven, wat de leesbaarheid verbetert.
+
+

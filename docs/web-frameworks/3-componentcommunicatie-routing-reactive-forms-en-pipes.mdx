@@ -1,0 +1,1171 @@
+---
+id: wf-theo-3
+title: 3. Componentcommunicatie, Routing, Reactive Forms en Pipes
+sidebar_label:  3. Componentcommunicatie, Routing, Reactive Forms en Pipes
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+In dit hoofdstuk verdiepen we ons in essentiële Angular-concepten die de basis vormen van professionele webapplicaties. We bekijken hoe componenten met elkaar communiceren via `@Input` en `@Output`, hoe je gebruikers door je applicatie navigeert met `Angular Router`, en hoe je robuuste formulieren bouwt met `Reactive Forms`. Tot slot leren we hoe `Pipes` je helpen om data netjes en consistent weer te geven in de gebruikersinterface.
+
+## 1. Componentcommunicatie
+
+Zoals we eerder al hebben gezien zijn Angular-apps volledig opgebouwd uit componenten die hiërarchisch georganiseerd zijn. Componenten moeten vaak gegevens uitwisselen: van parent naar child, van child naar parent of zelfs in beide richtingen. Angular biedt hiervoor `@Input`, `@Output` en two-way binding.
+
+Door deze mechanismen blijft de component hiërarchie losjes gekoppeld, wat onderhoud en herbruikbaarheid bevordert.
+
+### Data van parent naar child: `@Input`
+Met `@Input()` kan een parentcomponent data doorgeven aan een childcomponent. De parent stuurt een waarde, het child ontvangt deze en kan deze in zijn template gebruiken.
+
+```ts
+// src/app/kaart/kaart.ts
+import { Component } from '@angular/core';
+import { Profiel } from '../profiel/profiel';
+
+@Component({
+  selector: 'app-kaart',
+  imports: [Profiel],
+  templateUrl: './kaart.html',
+  styleUrl: './kaart.css',
+})
+
+export class Kaart {
+  gebruiker = "John";
+}
+```
+```html
+<!-- src/app/kaart/kaart.html -->
+<h2>Kaart component</h2>
+<app-profiel [naam]="gebruiker"></app-profiel>
+```
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input } from '@angular/core';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel {
+  @Input() naam!: string;
+}
+```
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>Naam: {{ naam }}</p>
+```
+
+Uitleg:
+- De `Kaart`-component heeft een variabele `gebruiker`
+- Via `[naam]="gebruiker"` wordt de naam doorgegeven aan het `Profiel`-component.
+- In `Profiel` wordt `@Input() naam` gebruikt om de waarde te ontvangen en in de template te tonen.
+- Property binding `[src]="avatarUrl"` en `[alt]="gebruiker"` zorgt ervoor dat het `<img>`-element automatisch de juiste waarden krijgt.
+
+### Event van child naar parent: `@Output`
+Met `@Output()` kan een childcomponent een event "uitsturen" naar de parent. Zo kan het child bijvoorbeeld een actie melden of data terugsturen wanneer er iets gebeurd.
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel {
+  @Output() naamGewijzigd = new EventEmitter<string>();
+
+  veranderNaam() {
+    // Stuurt de nieuwe naam door naar de parent
+    this.naamGewijzigd.emit('Jane');
+  }
+}
+```
+```html
+<!-- src/app/profiel/profiel.html -->
+<button (click)="veranderNaam()">Verander naam</button>
+
+```
+
+```ts
+// src/app/kaart/kaart.ts
+import { Component } from '@angular/core';
+import { Profiel } from '../profiel/profiel';
+
+@Component({
+  selector: 'app-kaart',
+  imports: [Profiel],
+  templateUrl: './kaart.html',
+  styleUrl: './kaart.css',
+})
+
+export class Kaart {
+  gebruiker = "John";
+
+  updateGebruiker(nieuweNaam: string) {
+    this.gebruiker = nieuweNaam;
+  }
+}
+```
+```html
+<!-- src/app/kaart/kaart.html -->
+<app-profiel (naamGewijzigd)="updateGebruiker($event)"></app-profiel>
+<p>Huidige gebruiker: {{ gebruiker }}</p>
+
+```
+Uitleg:
+- Het `Profiel`-component heeft een `@Output()` property genaamd `naamGewijzigd`, gekoppeld aan een `EventEmitter`.
+- Wanneer de knop wordt aangeklikt, roept `veranderNaam()` `naamGewijzigd.emit()` aan met de nieuwe waarde `'Jane'`.
+- De parent `Kaart` luistert naar dit event via `(naamGewijzigd)="updateGebruiker($event)"`.
+- Het `$event` bevat precies de waarde die door `emit()` werd verstuurd.
+- De functie `updateGebruiker()` ontvangt de nieuwe naam en past de variabele `gebruiker` aan.
+Dankzij Angular's reactiviteit wordt de UI automatisch bijgewerkt en zie je direct de nieuwe naam in het `<p>`-element.
+
+### Two-way binding tussen parent en child
+Two-way binding laat een parentcomponent en childcomponent automatisch hun waarden synchroniseren.
+Angular doet dit door:
+- Een `@Input()` te gebruiken voor de huidige waarde
+- Een `@Output()[naam]Change` te gebruiken voor de wijzigingen
+- De parent gebruikt `[(naam)]="property"` voor automatische synchronisatie
+Dit patroon vervangt dus de handmatige combinatie van `[property]` en `(propertyChanged)` waarbij property binding en event binding apart gekoppeld moeten worden..
+
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel {
+  @Input() naam!: string;
+  @Output() naamChange = new EventEmitter<string>();
+
+  veranderNaam() {
+    this.naamChange.emit('Jane');
+  }
+}
+```
+```html
+<!-- src/app/profiel/profiel.html -->
+<h3>Profiel component</h3>
+<p>Naam: {{ naam }}</p>
+<button (click)="veranderNaam()">Verander naam</button>
+```
+Uitleg:
+  - `@Input() naam` ontvangt de waarde van de parent
+  - `@Output() naamChange` stuurt de nieuwe waarde terug
+  - Angular detecteert automatisch dat dit samen een **two-way binding pair** vormt.
+
+In het parentcomponent zien we dan het volgende:
+```ts
+// src/app/kaart/kaart.ts
+import { Component } from '@angular/core';
+import { Profiel } from '../profiel/profiel';
+
+@Component({
+  selector: 'app-kaart',
+  imports: [Profiel],
+  templateUrl: './kaart.html'
+})
+export class Kaart {
+  gebruiker = "John";
+}
+```
+```html
+<!-- src/app/kaart/kaart.html -->
+<h2>Kaart Component</h2>
+
+<!-- Two-way binding -->
+<app-profiel [(naam)]="gebruiker"></app-profiel>
+
+<p>Huidige gebruiker: {{ gebruiker }}</p>
+```
+Uitleg:
+- `[(naam)]="gebruiker"` betekent:
+  - Stuur `gebruiker`naar child via `@Input() naam`
+  - Ontvang wijzigingen van `naamChange` en stel `gebruiker` direct in op de nieuwe waarde van naam.
+
+:::warning[Belangrijk]
+Het `Change`-gedeelte van `naamChange` is essentieel. Angular gebruikt deze suffix om automatisch te bepalen naar welk event het moet luisteren bij two-way binding. Wanneer je `[(naam)]` gebruikt, plakt Angular achterliggend zelf `"Change"` achter de variabelenaam en zoekt dus naar een event met de naam `naamChange`. Bestaat die Output niet, dan werkt two-way binding niet. Daarom moet elke two-way binding bestaan uit een `@Input()` met een bepaalde naam en een `@Output()` met dezelfde naam gevolgd door `Change`.
+:::
+### Event payloads
+Een `@Output` kan veel meer doorgeven dan alleen een string of een getal. Vaak wordt een heel object doorgestuurd, bijvoorbeeld een geselecteerd product of een formulierveld.
+
+```ts
+// src/app/product/product.ts
+import { Component, Output, EventEmitter } from '@angular/core';
+
+@Component({
+  selector: 'app-product',
+  templateUrl: './product.html'
+})
+export class Product {
+  @Output() productGeselecteerd = new EventEmitter<{ id: number; naam: string }>();
+
+  selecteerProduct() {
+    this.productGeselecteerd.emit({ id: 1, naam: 'Laptop' });
+  }
+}
+```
+```html
+<!-- src/app/product/product.html -->
+<button (click)="selecteerProduct()">Selecteer product</button>
+```
+```ts
+// src/app/winkel/winkel.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-winkel',
+  templateUrl: './winkel.html'
+})
+export class Winkel {
+  geselecteerdProduct: { id: number; naam: string } | null = null;
+
+  updateProduct(product: { id: number; naam: string }) {
+    this.geselecteerdProduct = product;
+  }
+}
+```
+```html
+<!-- src/app/winkel/winkel.html -->
+<app-product (productGeselecteerd)="updateProduct($event)"></app-product>
+<p>Geselecteerd product: {{ geselecteerdProduct?.naam }}</p>
+```
+Uitleg:
+- Het child-component `Product` stuurt via `productGeselecteerd.emit()` een object door.
+- Het parent-component `Winkel` ontvangt dit object via `(productGeselecteerd)="updateProduct($event)"`.
+- De componentvariabele `geselecteerdProduct` wordt bijgewerkt en automatisch weergegeven in de template dankzij Angular’s reactiviteit.
+
+
+### ngOnChanges
+
+Soms moet een child-component reageren wanneer er nieuwe data via `@Input()` binnenkomt.  
+
+Angular biedt hiervoor de lifecycle hook `ngOnChanges`. Hiermee kan je logica uitvoeren telkens wanneer een input-property verandert.
+
+Kort samengevat:
+- `ngOnChanges(changes: SimpleChanges)` wordt automatisch aangeroepen wanneer een `@Input()`-waarde verandert.
+- `changes` bevat informatie over oude en nieuwe waarden.
+- Dit is handig om side-effects uit te voeren of interne state bij te werken bij nieuwe input.
+
+> Angular Signals biedt een modernere en vaak eenvoudiger manier om op veranderingen te reageren. Zie later.
+
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel implements OnChanges {
+  @Input() naam!: string;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['naam']) {
+      console.log(`Naam gewijzigd van ${changes['naam'].previousValue} naar ${changes['naam'].currentValue}`);
+    }
+  }
+}
+```
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>Naam: {{ naam }}</p>
+```
+```ts
+// src/app/kaart/kaart.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-kaart',
+  templateUrl: './kaart.html'
+})
+export class Kaart {
+  gebruiker = "John";
+
+  veranderNaam() {
+    this.gebruiker = "Jane";
+  }
+}
+```
+```html
+<!-- src/app/kaart/kaart.html -->
+<app-profiel [naam]="gebruiker"></app-profiel>
+<button (click)="veranderNaam()">Verander naam</button>
+```
+Uitleg:
+- Wanneer de parent `Kaart` de waarde van `gebruiker` aanpast, wordt deze nieuwe waarde automatisch doorgegeven aan het child `Profiel`.  
+- `ngOnChanges` detecteert deze verandering en voert de logica uit (bijvoorbeeld logging of interne updates).  
+- Dankzij Angular’s reactiviteit wordt de UI automatisch bijgewerkt met de nieuwe naam.
+
+## 2. Routing in Angular 20
+Angular-apps zijn **Single Page Applications (SPA).**. Dat betekent dat er één HTML-pagina geladen wordt en dat de content dynamisch wordt aangepast zonder dat de pagina volledig herladen wordt. Routing in Angular is het mechanisme waarmee je verschillende componenten toont op basis van de URL. De Router beheert hiervoor twee dingen: welke component gekoppeld zijn aan welke routes en hoe je navigeert tussen deze componenten.
+
+Routing bestaat uit drie belangrijke onderdelen in de code:
+- Routes definiëren in `app.routes.ts`
+- Applicatieconfiguratie in `app.config.ts`
+- bootstrapping in `main.ts`
+
+### Routes definiëren
+Routes worden in Angular gedefinieerd als een mapping tussen een path en een component. Stel dat we een eenvoudige applicatie hebben met een homepagina en een profielpagina. we maken dan het volgende aan in `app.routes.ts`
+
+```ts
+// src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { Home } from './home/home';
+import { Profiel } from './profiel/profiel';
+
+export const appRoutes: Routes = [
+  { path: '', component: Home },
+  { path: 'profiel', component: Profiel }
+];
+```
+Hier zien we dat:
+- het pad `''` (de lege string) verwijst naar de homepagina
+- het pad `'profiel'` verwijst naar het `Profiel`-component
+Op basis van de URL bepaalt Angular welk component getoond moet worden.
+
+### Applicatieconfiguratie
+In `app.config.ts` worden providers gedefinieerd die beschikbaar zijn in de volledige toepassing. Bij Angular 20 zijn er standaard providers aanwezig die de meeste projecten zonder extra instellingen gebruiken. De router wordt hier via `provideRouter()` geactiveerd.
+
+```ts
+// src/app/app.config.ts
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+
+import { routes } from './app.routes';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes)
+  ]
+};
+```
+`provideRouter(routes)` zorgt ervoor dat de router beschikbaar is in de volledige applicatie.
+De overige providers worden standaard toegevoegd door Angular voor foutafhandeling en performance-optimalisaties. Voor routing hoef je deze niet aan te passen, maar ze blijven deel uitmaken van de standaardconfiguratie.
+
+### Bootstrapping
+`main.ts` start de applicaties op. hierbij wordt het rootcomponent ingesteld en wordt de applicatieconfiguratie gebruikt om de router en andere providers in te laden.
+```ts
+// src/main.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { AppComponent } from './app.component';
+import { appConfig } from './app.config';
+
+bootstrapApplication(AppComponent, appConfig)
+  .catch(err => console.error(err));
+```
+
+### Navigeren binnen de applicatie
+In de templates van je componenten werk je met `routerLink` om de gebruiker naar een andere toue te laten gaan. Dit gebeurt declaratief, zonder extra TypeScript-code. Om verder te gaan met het voorbeeld van eerder, zou dit een link kunnen zijn in je `Home`-component:
+```html
+<!-- src/app/home/home.html -->
+<a routerLink="/profiel">Ga naar profiel</a>
+```
+`routerLinkActive="active"` voegt automatisch de klasse active toe aan het element zodra de gebruiker zich op de betreffende pagina bevindt. Zo kan je links aanduiden met eigen CSS.
+```html
+<!-- src/app/app.html -->
+<nav>
+  <a routerLink="">Home</a>
+  <a routerLink="/profiel" routerLinkActive="active">Profiel</a>
+</nav>
+```
+
+### de router-outlet
+Aangezien dat de componenten dynamisch worden ingeladen, moeten we in de root-template `app.html` aangeven, waar de component van die specifieke router moet worden ingeladen. Dit kunnen we doen met `<router-outlet>`
+
+```html
+<!-- src/app/app.html -->
+<h1>Mijn App</h1>
+
+<nav>
+  <a routerLink="/">Home</a>
+  <a routerLink="/profiel">Profiel</a>
+</nav>
+
+<!-- Hier wordt Home of Profiel getoond -->
+<router-outlet></router-outlet>
+```
+Belangrijk hierbij is dat in `app.ts` ook `RouterOutlet` geïmporteerd is. Bij de standaardinitialitatie van de applicatie wordt dit automatisch gedaan.
+```ts
+// src/app/app.ts
+import { Component, signal } from '@angular/core';
+import { RouterOutlet } from '@angular/router';
+@Component({
+  selector: 'app-root',
+  imports: [RouterOutlet],
+  templateUrl: './app.html',
+  styleUrl: './app.css'
+})
+export class App {
+  protected readonly title = signal('mijn-angular-project');
+}
+```
+
+### URL-parameters (route parameters)
+Soms is het nodig om een component dynamisch in te laden. Denk aan de profielpagina: we willen misschien een profiel tonen op basis van een id of naam die in de URL wordt meegegeven. Daardoor kan één enkel component verschillende profielen tonen, afhankelijk van welke waarde de gebruiker meegeeft.
+
+Om dit mogelijk te maken voegen we een route parameter toe in `app.routes.ts`.
+Dat doe je door in het pad `/:parameter` te gebruiken.
+```ts
+// src/app/app.routes.ts
+{ path: 'profiel/:id', component: Profiel }
+```
+
+Wanneer iemand naar `/profiel/15` gaat, wordt 15 doorgegeven als parameter aan het `Profiel`-component. het component kan dan zelf bepalen wat het met die id doet.
+
+#### Uitlezen in de component
+We kunnen route parameters uitlezen via de `ActivatedRoute`. Elke keer als de parameter verandert — bijvoorbeeld wanneer de gebruiker navigeert naar een ander profiel — zal de `params`-observable een nieuwe waarde doorgeven.
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel  {
+  profielId: string | null = null;
+  constructor(private route: ActivatedRoute) {
+    this.route.params.subscribe(p => {
+      // Hier kan je beschrijven wat er moet gebeuren met de id parameter
+      this.profielId = p.get('id');
+    })
+  }
+}
+```
+Om te testen dat alles werkt, kunnen we in de template van het `Profiel`-component eenvoudig de id weergeven:
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>{{ profielId }}</p>
+```
+Als je nu naar `/profiel/16` surft, zou er gewoon `16` op het scherm moeten verschijnen.
+
+### Query Parameters
+Query parameters zijn extra informatie die je aan een URL kunt toevoegen achter een vraagteken (`?`). Ze zijn niet verplicht, maar worden vaak gebruikt om een lijst te filteren, te sorteren of een pagina te bepalen.
+Voorbeeld:
+```
+/profiel?tab=instellingen&edit=true
+```
+Hier is:
+- `tab` een query parameter met de waarde `instellingen`
+- `edit` een query parameter met de waarde `true`
+
+Query parameters zijn dus gewoon naam-waarde koppels achter een `?` en gescheiden door `&`.
+
+#### Query parameters lezen in Angular
+In Angular lees je query parameters via de `ActivatedRoute` service.
+Net zoals bij andere router-informatie geeft de `queryParamMap`-observable een nieuwe waarde wanneer de parameters veranderen.
+
+```ts
+// src/app/profiel/profiel.ts
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { ActivatedRoute } from '@angular/router';
+
+@Component({
+  selector: 'app-profiel',
+  templateUrl: './profiel.html'
+})
+export class Profiel  {
+  categorie: string | null = null;
+  constructor(private route: ActivatedRoute) {
+    this.route.queryParamMap.subscribe(params => {
+      // Hier kan je beschrijven wat er moet gebeuren met de categorie query parameter
+      this.categorie = params.get('categorie');
+    })
+  }
+}
+```
+Om te testen dat alles werkt, kunnen we in de template van het Profiel-component de `categorie`-variabele weergeven:
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>categorie: {{ categorie }}</p>
+```
+Als je nu naar `/profiel?categorie=instellingen` gaat, zal de pagina `categorie: instellingen` tonen.
+
+#### Navigeren met query parameters
+Je kunt een gebruiker vanuit TypeScript naar een route sturen en tegelijk query parameters meegeven. Dit is handig bijvoorbeeld bij filters, zoekfuncties of tab-navigatie.
+```ts
+// src/app/home/home.ts
+import { Component } from '@angular/core';
+import { Router } from '@angular/router';
+
+@Component({
+  selector: 'app-home',
+  imports: [],
+  templateUrl: './home.html',
+  styleUrl: './home.css',
+})
+export class Home {
+  constructor(private router: Router) {}
+
+  gaNaarInstellingen() {
+    this.router.navigate(['/profiel', 1], { queryParams: { categorie: 'instellingen' } });
+  }
+
+  gaNaarOverzicht() {
+    this.router.navigate(['/profiel', 1], { queryParams: { categorie: 'overzicht' } });
+  }
+}
+```
+> We geven in dit voorbeeld 1 mee omdat we aannemen dat we een specifieke gebruiker of profiel willen openen. In een echte applicatie zou dit dynamisch kunnen zijn, bijvoorbeeld het ID van de ingelogde gebruiker of een geselecteerd profiel uit een lijst.
+
+:::info
+Met de array-syntax `['/profiel', 1]` wordt Angular automatisch geïnformeerd dat `1` een apart route-segment is, wat correct gekoppeld wordt aan de route `profiel/:id` in `app.routes.ts`. Tegelijkertijd voegen we met queryParams extra informatie toe, zoals de categorie (`instellingen` of `overzicht`) die in de component gebruikt kan worden om specifieke inhoud te tonen.
+:::
+
+In dit voorbeeld zouden we nu de template kunnen aansturen met buttons:
+```html
+<!-- src/app/home/home.html -->
+<h2>Home</h2>
+
+<button (click)="gaNaarInstellingen()">Instellingen</button>
+<button (click)="gaNaarOverzicht()">Overzicht</button>
+```
+uitleg:
+- `this.router.navigate()` navigeert programmatisch naar een andere router.
+- Het object `{ queryParams: {categorie: 'instellingen' } }` voegt query parameters toe aan de URL.
+- In het `Profiel`-component wordt deze query parameter opgepikt via `ActivatedRoute.queryParamMap` (zoals we eerder hebben gezien) en kan gebruikt worden om bijvoorbeeld de juiste tab of sectie te tonen.
+
+Als je nu op *Instellingen* klikt, wordt de URL `/profiel/1?categorie=instellingen` en in het `Profiel`-component wordt `this.categorie` automatisch bijgewerkt naar `"instellingen"`. Op dezelfde manier wordt bij *Overzicht* de query parameter `"overzicht"` doorgegeven en weergegeven
+
+:::warning[belangrijk]
+de component hoeft zelf niet opnieuw te worden geladen; dankzij de `queryParamMap`-observable detecteert Angular de verandering en kan je er dynamisch op reageren, bijvoorbeeld door een andere tab te tonen of content te filteren.
+:::
+
+### Route Guards
+Route Guards in Angular bepalen of een gebruiker toegang mag krijgen tot een route. Ze worden vaak gebruikt voor:
+- **authenticatie:** alleen ingelogde gebruikers mogen naar bepaalde pagina's.
+- **authorisatie:** alleen gebruikers met specifieke rechten of rollen mogen bepaalde routes zien.
+- **bevestiging bij verlaten:** waarschuw de gebruiker als hij een formulier verlaat zonder op te slaan.
+
+#### Een guard genereren
+Je kunt een guard genereren via Angular CLI met het commando
+```bash
+ng generate guard
+```
+bijvoorbeeld:
+```bash
+ng generate guard guards/auth
+```
+Bij het genereren zal Angular vragen welk type guard je wilt maken:
+```bash
+$ ng generate guard guards/auth
+? Which type of guard would you like to create?
+❯◉ CanActivate
+ ◯ CanActivateChild
+ ◯ CanDeactivate
+ ◯ CanMatch
+```
+- `CanActivate`: voorkomt dat een route geladen wordt als de gebruiker geen toegang heeft.
+- `CanActivateChild`: hetzelfde als CanActivate, maar voor child-routes van een parent route.
+- `CanDeactivate`: wordt gebruikt om te voorkomen dat een gebruiker een component verlaat (bijv. waarschuwing bij niet-opgeslagen formulieren).
+- `CanMatch`: geavanceerd gebruik, bepaalt of een route überhaupt moet “matchen” met de URL.
+
+In deze cursus behandelen we enkel `CanActivate` en `CanDeactivate`.
+:::warning[belangrijk]
+een guard is geen component, maar een service die bepaalt of een route geladen mag worden of dat een gebruiker een component mag verlaten. 
+:::
+
+Nadat de component gegenereerd is krijg je een TypeScript bestand terug zoals in dit voorbeeld:
+```ts
+// src/app/guards/auth-guard.ts
+import { CanActivateFn } from '@angular/router';
+
+export const authGuard: CanActivateFn = (route, state) => {
+  return true;
+};
+```
+Standaard geeft deze guard dus altijd `true` terug.
+We gaan dit vervangen door logica om te bepalen of de gebruiker toegang heeft tot de route.
+
+uitleg:
+- `canActivateFn` is een functie die bepaalt of een route geladen mag worden.
+- `route` en `state` geven info over de route waar de gebruiker naartoe wil.
+- Door `true` of `false` terug te geven, laat je Angular de route wel of niet tonen.
+
+:::info[Oude methode]
+In oudere Angular-tutorials of documentatie zie je vaak dat `CanActivate` guards als **class-based service** worden geschreven met `@Injectable` en het `CanActivate`-interface.  
+```ts
+// src/app/guards/auth-guard.ts
+import { Injectable } from '@angular/core';
+import { CanActivate, Router } from '@angular/router';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthGuard implements CanActivate {
+
+  constructor(private router: Router) {}
+
+  canActivate(): boolean {
+    const loggedIn = false; // Hier check je bv. of de gebruiker ingelogd is
+    if (!loggedIn) {
+      // Gebruiker mag niet naar deze route → alert
+      alert("De gebruiker is niet ingelogd!")
+      }
+    return loggedIn;
+  }
+}
+```
+Deze methode gebruikt dependency injection en een class om te bepalen of een route geladen mag worden. Voorbeelden hiervan vind je in veel oudere cursussen of boeken. 
+
+Aangezien deze methode wel nog gebruikt wordt, zullen de voorbeelden telkens in de moderne variant en deze variant getoond worden.
+
+> Let op: de Angular CLI genereert tegenwoordig standaard function-based guards. Class-based guards werken nog steeds, maar de function-based methode is korter en moderner.
+:::
+
+#### `CanActivate`-guard
+Een `CanActivate` guard bepaalt of een gebruiker toegang mag krijgen tot een bepaalde route.  
+Bijvoorbeeld: alleen ingelogde gebruikers mogen naar de profielpagina.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/guards/auth-guard.ts
+  import { CanActivateFn } from '@angular/router';
+  export const authGuard: CanActivateFn = (route, state) => {
+    const loggedIn = false; // Hier check je bv. of de gebruiker ingelogd is
+    if (!loggedIn) {
+      // Gebruiker mag niet naar deze route → alert
+      alert("De gebruiker is niet ingelogd!")
+    }
+    return loggedIn;
+  };
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/guards/auth-guard.ts
+  import { Injectable } from '@angular/core';
+  import { CanActivate, Router } from '@angular/router';
+  @Injectable({
+    providedIn: 'root'
+  })
+  export class AuthGuard implements CanActivate {
+    constructor(private router: Router) {}
+    canActivate(): boolean {
+      const loggedIn = false; // Hier check je bv. of de gebruiker ingelogd is
+      if (!loggedIn) {
+        // Gebruiker mag niet naar deze route → alert
+        alert("De gebruiker is niet ingelogd!")
+    } 
+      return loggedIn;
+    }
+  }
+  ```
+  </TabItem>
+</Tabs>
+
+Om deze guard te gebruiken, moeten we hem koppelen aan een route in `app.routes.ts`.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { authGuard } from './guards/auth-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canActivate: [authGuard] }
+
+  ]
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { AuthGuard } from './guards/auth-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canActivate: [AuthGuard] }
+
+  ]
+  ```
+  </TabItem>
+</Tabs>
+
+#### `CanDeactivate`-guard
+Een `CanDeactivate` guard voorkomt dat een gebruiker een component verlaat zonder bevestiging. Dit is handig bij formulieren waar je wilt waarschuwen voor niet-opgeslagen wijzigingen.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/guards/unsaved-changes-guard.ts
+  import { CanActivateFn } from '@angular/router';
+  export const unsavedChangesGuard: CanActivateFn = (route, state) => {
+      const unSavedChanges = true; // Hier check je of er niet-opgeslagen wijzigingen zijn
+      if (unSavedChanges) {
+        // Waarschuw de gebruiker
+        const confirmLeave = confirm("Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten?");
+        return confirmLeave;
+      }
+    return !unSavedChanges;
+  };
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/guards/unsaved-changes-guard.ts
+  import { Injectable } from '@angular/core';
+  import { CanDeactivate } from '@angular/router';
+  @Injectable({
+    providedIn: 'root'
+  })
+  export class UnsavedChangesGuard implements CanDeactivate<unknown> {
+    canDeactivate(): boolean {
+      const unSavedChanges = true; // Hier check je of er niet-opgeslagen wijzigingen zijn
+      if (unSavedChanges) {
+        // Waarschuw de gebruiker
+        const confirmLeave = confirm("Je hebt niet-opgeslagen wijzigingen. Weet je zeker dat je deze pagina wilt verlaten?");
+        return confirmLeave;
+      }
+      return !unSavedChanges;
+    }
+  }
+  ```
+  </TabItem>
+</Tabs>
+Om deze guard te gebruiken, moeten we hem koppelen aan een route in `app.routes.ts`.
+<Tabs>
+  <TabItem value="function-based" label="Function-based guard" default>
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { unsavedChangesGuard } from './guards/unsaved-changes-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canDeactivate: [unsavedChangesGuard] }
+  ]
+  ```
+  </TabItem>
+  <TabItem value="class-based" label="Class-based guard">
+  ```ts
+  // src/app/app.routes.ts
+  import { Routes } from '@angular/router';
+  import { Home } from './home/home';
+  import { Profiel } from './profiel/profiel';
+  import { UnsavedChangesGuard } from './guards/unsaved-changes-guard';
+  export const routes: Routes = [
+      { path: '', component: Home },
+      { path: 'profiel/:id', component: Profiel, canDeactivate: [UnsavedChangesGuard] }
+  ]
+  ```
+  </TabItem>
+</Tabs>
+Uitleg:
+- De `unsavedChangesGuard` controleert of er niet-opgeslagen wijzigingen zijn.
+- Als dat zo is, wordt de gebruiker gevraagd om te bevestigen of hij de pagina wil verlaten.
+- Als de gebruiker bevestigt, keert de guard `true` terug en mag de route verlaten worden; anders `false` en blijft de gebruiker op de pagina.
+
+### Lazy loading
+Lazy loading is een techniek waarbij bepaalde delen van een applicatie pas worden geladen wanneer ze daadwerkelijk nodig zijn. Dit verbetert de initiële laadtijd van de applicatie, omdat niet alle code in één keer hoeft te worden gedownload.
+
+In Angular kan je lazy loading toepassen op modules. Dit betekent dat een module (en de bijbehorende componenten, services, etc.) pas wordt geladen wanneer de gebruiker naar een route navigeert die deze module gebruikt.
+
+Stel dat we een module `AdminModule` hebben die alleen toegankelijk is voor beheerders. We kunnen deze module lazy loaden door de route als volgt te definiëren in `app.routes.ts`:
+```ts
+// src/app/app.routes.ts
+import { Routes } from '@angular/router';
+import { Home } from './home/home';
+import { Profiel } from './profiel/profiel';
+export const routes: Routes = [
+    { path: '', component: Home },
+    { path: 'profiel/:id', component: Profiel },
+    { path: 'admin', loadComponent: () => import('./admin/admin').then(m => m.Admin) }
+]
+```
+Hier wordt de `Admin`-component pas geladen wanneer de gebruiker naar de `/admin`-route navigeert. Dit gebeurt via de `loadComponent`-functie die een dynamische import uitvoert.
+
+Uitleg:
+- `loadComponent` gebruikt een functie die een promise teruggeeft.
+- De functie importeert de module dynamisch met `import()`.
+- Zodra de gebruiker naar de `/admin`-route gaat, wordt de module geladen en het `Admin`-component weergegeven.
+Dit zorgt ervoor dat de initiële laadtijd van de applicatie korter is, omdat de code voor de `Admin`-module pas wordt gedownload wanneer deze daadwerkelijk nodig is.
+
+## 3. Formulieren in Angular
+Formulieren zijn essentieel voor user input, zoals bij login, registratie of checkout. Angular biedt twee manieren om formulieren te maken: template-driven forms en reactive forms. Template-driven forms werken met `ngModel` en zijn eenvoudig, maar minder krachtig en moeilijker testbaar. Reactive forms verplaatsen de logica naar TypeScript, wat ze flexibeler, schaalbaarder en beter testbaar maakt. Moderne Angular-apps gebruiken daarom meestal Reactive Forms.
+
+### Waarom Reactive Forms?
+Reactive Forms scheiden de logica en HTML. Je hebt volledige controle over de waarden en validatie van de velden, formulieren zijn beter schaalbaar en makkelijker te testen. Voor een login-formulier betekent dit dat validatie en verwerking van e-mail en wachtwoord volledig in TypeScript kunnen gebeuren, terwijl de HTML puur declaratief blijft.
+
+### Reactive Forms opzetten
+Om Reactive Forms te gebruiken, moet je de `ReactiveFormsModule` importeren in de component waar je het formulier wilt gebruiken.
+
+```ts
+// src/app/login/login.ts
+import { Component } from '@angular/core';
+import { ReactiveFormsModule } from '@angular/forms';
+
+@Component({
+  selector: 'app-login',
+  imports: [ReactiveFormsModule],
+  templateUrl: './login.html',
+  styleUrl: './login.css',
+})
+
+export class Login {
+}
+```
+
+### FormGroup en FormControl
+In Reactive Forms gebruik je `FormControl` voor individuele velden en `FormGroup` voor een verzameling velden. Validators zorgen ervoor dat de waarden voldoen aan bepaalde regels, zoals verplicht zijn, minimumlengte of regex-checks.
+```ts
+// src/app/login/login.ts
+import { Component } from '@angular/core';
+import { ReactiveFormsModule, FormGroup, FormControl, Validators } from '@angular/forms';
+@Component({
+  selector: 'app-login',
+  imports: [ReactiveFormsModule],
+  templateUrl: './login.html',
+  styleUrl: './login.css',
+})
+export class Login {
+
+form = new FormGroup({
+  email: new FormControl('', [Validators.required, Validators.email]),
+  password: new FormControl('', Validators.required)
+});
+
+onSubmit() {
+  console.log(this.form.value);
+}
+}
+```
+`onSubmit()` wordt aangeroepen wanneer het formulier wordt ingediend. Hier loggen we de waarden van het formulier naar de console.
+### Template koppeling
+In de HTML-template gebruik je `formGroup` om het formulier te koppelen aan de `FormGroup` in TypeScript. Elk invoerveld gebruikt `formControlName` om te verwijzen naar de bijbehorende `FormControl`.
+```html
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <label>Email</label>
+  <input type="email" formControlName="email">
+  @if (form.controls.email.invalid && form.controls.email.touched) {
+  <div>Ongeldig emailadres</div>
+  }
+  <label>Wachtwoord</label>
+  <input type="password" formControlName="password">
+  <button type="submit" [disabled]="form.invalid">Login</button>
+</form>
+```
+
+Uitleg:
+- `[formGroup]="form"` koppelt het formulier aan de `FormGroup` in TypeScript.
+- `formControlName="email"` en `formControlName="wachtwoord"` koppelen de invoervelden aan hun respectievelijke `FormControl`.
+- De validatieberichten worden getoond als het veld gefocust is (`touched`) en ongeldig (`invalid`).
+- Wanneer het event `ngSubmit` wordt getriggerd (bijvoorbeeld door op de submit-knop te klikken), wordt de `login()`-methode aangeroepen.
+
+### Validators
+Angular biedt verschillende ingebouwde validators, zoals:
+- `Validators.required`: veld is verplicht
+- `Validators.email`: veld moet een geldig e-mailadres zijn
+- `Validators.minLength(n)`/`Validators.maxLength(n)`: minimale/maximale lengte
+- `Validators.pattern(regex)`: veld moet voldoen aan een regex-patroon
+
+Daarnaast kan je ook eigen validators schrijven voor specifieke validatieregels.
+```ts
+// src/app/login/login.ts
+export function noAdmin(control: FormControl) {
+  const value = control.value as string;
+  return value && value.toLowerCase() === 'admin' ? { noAdmin: true } : null;
+}
+
+export class Login {
+  form = new FormGroup({
+    gebruikersnaam: new FormControl('', [Validators.required, noAdmin]),
+    wachtwoord: new FormControl('', Validators.required)
+  });
+}
+```
+Hier hebben we een eigen validator `noAdmin` gemaakt die controleert of de gebruikersnaam niet 'admin' is. Als dat wel zo is, retourneert de validator een foutobject `{ noAdmin: true }`, anders `null`.
+
+### Foutmeldingen
+In de template kan je foutmeldingen tonen op basis van de validatiestatus van elk veld.
+```html
+<!-- src/app/login/login.html -->
+<label>Gebruikersnaam</label>
+<input type="text" formControlName="gebruikersnaam">
+@if (form.controls.gebruikersnaam.touched && form.controls.gebruikersnaam.hasError('noAdmin')) {
+  <div>Gebruikersnaam mag niet "admin" zijn</div>
+}
+```
+Uitleg:
+- `form.controls.gebruikersnaam.touched` controleert of het veld gefocust is.
+- `form.controls.gebruikersnaam.hasError('noAdmin')` controleert of de `noAdmin`-validator een fout heeft geretourneerd.
+- Als beide waar zijn, wordt de foutmelding getoond.
+
+### FormArray
+`FormArray` is een speciale `FormGroup` die een dynamische lijst van `FormControl`- of `FormGroup`-objecten bevat. Dit is handig voor velden die meerdere waarden kunnen hebben, zoals een lijst van telefoonnummers of adressen.
+
+```ts
+// src/app/telefoonnummers/telefoonnummers.ts
+import { Component } from '@angular/core';
+import { ReactiveFormsModule, FormGroup, FormControl, FormArray, Validators } from '@angular/forms';
+@Component({
+  selector: 'app-telefoonnummers',
+  imports: [ReactiveFormsModule],
+  templateUrl: './telefoonnummers.html',
+  styleUrl: './telefoonnummers.css',
+})
+export class Telefoonnummers {
+  form = new FormGroup({
+    telefoonnummers: new FormArray([
+      new FormControl('', Validators.required)
+    ])
+  });
+  get telefoonnummers() {
+    return this.form.get('telefoonnummers') as FormArray;
+  }
+  voegTelefoonnummerToe() {
+    this.telefoonnummers.push(new FormControl('', Validators.required));
+  }
+  onSubmit() {
+    console.log(this.form.value);
+  }
+}
+```
+```html
+<!-- src/app/telefoonnummers/telefoonnummers.html -->
+<form [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div formArrayName="telefoonnummers">
+  @for (ctrl of telefoonnummers.controls; let i = index; track $index) {
+    <div>
+      <label>Telefoonnummer {{ i + 1 }}</label>
+      <input type="text" [formControlName]="i">
+    </div>
+  }
+  </div>
+  <button type="button" (click)="voegTelefoonnummerToe()">Voeg telefoonnummer toe</button>
+  <button type="submit" [disabled]="form.invalid">Verzenden</button>
+</form>
+```
+Uitleg:
+- `FormArray` wordt gebruikt om een dynamische lijst van telefoonnummer-velden te beheren.
+- De `voegTelefoonnummerToe()`-methode voegt een nieuw `FormControl` toe aan de `FormArray`.
+- In de template wordt met `formArrayName` de array gekoppeld en met een `for`-lus worden de individuele velden weergegeven.
+- De gebruiker kan meerdere telefoonnummers invoeren door op de knop te klikken.
+- Wanneer de gebruiker een telefoonnummer toevoegt, wordt er een nieuw invoerveld weergegeven.
+
+### Waarden lezen & updaten
+Je kunt de waarden uitlezen via `form.value` of individuele controls via `form.get('controlName').value`.
+```ts
+//src/app/login/login.ts
+
+onSubmit() {
+  const email = this.form.get('email')?.value;
+  const password = this.form.get('password')?.value;
+  console.log(`Email: ${email}, Wachtwoord: ${password}`);
+}
+```
+
+Om waarden bij te werken, gebruik je `setValue()` of `patchValue()`.
+```ts
+// src/app/login/login.ts
+
+this.form.setValue({
+  email: '',
+  password: ''
+})
+// of
+this.form.patchValue({
+  email: ''
+})
+```
+- `setValue()` vereist dat je alle velden bijwerkt.
+- `patchValue()` laat je toe om slechts enkele velden bij te werken.
+
+### Best practices
+
+- Hou validatie in TypeScript, niet in HTML. Definieer validators in je component class (`Validators.required`, custom validators). Dit centraliseert je logica en vergemakkelijkt testen.
+
+- Gebruik duidelijke en korte foutmeldingen. Toon specifieke errors: "E-mailadres is verplicht" is beter dan "Invalid input". Gebruik `hasError()` voor de juiste melding.
+
+- Structureer grotere formulieren. Gebruik nested `FormGroup` voor logische secties en `FormArray` voor dynamische lijsten. Dit houdt je code overzichtelijk.
+
+- Test validators apart. Custom validators zijn pure functies. Test ze los van je component voor eenvoudiger debugging.
+
+- Schakel submit-knop uit bij ongeldig formulier. Gebruik `[disabled]="!form.valid"` om ongeldige submissions te voorkomen en gebruikers direct feedback te geven.
+
+
+## 4. Pipes in Angular
+Pipes worden in Angular gebruikt om waarden te formatteren of te veranderen rechtstreeks in de template. Ze zorgen ervoor dat je geen presentatielogica in je component moet zetten. Daardoor blijft je code overzichtelijk en kan de template zelf de opmaak regelen.
+
+### Wat zijn Pipes?
+Pipes voeren een transformatie uit op een waarde. Ze hebben altijd dezelfde vorm:
+```html
+{{ waarde | pipeNaam:argument1:argument2 }}
+```
+Hierbij is:
+- `waarde`: de inputwaarde die je wilt transformeren
+- `pipeNaam`: de naam van de pipe die je wilt gebruiken
+- `argument1`, `argument2`: optionele extra parameters die je aan de pipe kunt doorgeven
+Je kan pipes combineren (chaining):
+```html
+{{ waarde | pipe1 | pipe2:arg1 }}
+```
+
+### Ingebouwde Pipes
+Angular biedt verschillende ingebouwde pipes voor veelvoorkomende transformaties, zoals:
+- `date`: formatteert datums
+- `uppercase` / `lowercase`: zet tekst om naar hoofdletters of kleine letters
+- `titlecase`: zet de eerste letter van elk woord in hoofdletters
+- `number`: Europese notatie voor getallen
+- `currency`: formatteert getallen als valuta
+- `percent`: formatteert getallen als percentage
+
+#### `date`-pipe
+```html
+<p>Vandaag is {{ today | date:'fullDate' }}</p>
+<p>Vandaag is {{ today | date: 'dd/MM/yyyy' }}</p>
+<p>De tijd is {{ now | date: 'HH:mm' }}</p>
+<p>De tijd is {{ now | date: 'dd/MM/yyyy, HH:mm zzzz' }}</p>
+```
+Uitleg:
+- `fullDate`: toont de volledige datum in een leesbaar formaat
+- `dd/MM/yyyy`: toont de datum in dag/maand/jaar-formaat
+- `HH:mm`: toont alleen het uur en de minuten in 24-uurs formaat
+- `dd/MM/yyyy, HH:mm zzzz`: toont datum, tijd en tijdzone
+
+#### `uppercase`- en `lowercase`-pipes
+```html
+<p>Hoofdletters: {{ naam | uppercase }}</p>
+<p>Kleine letters: {{ naam | lowercase }}</p>
+```
+Uitleg:
+- `uppercase`: zet alle letters in hoofdletters
+- `lowercase`: zet alle letters in kleine letters 
+
+#### `currency`-pipe
+```html
+<p>Prijs: {{ prijs | currency:'EUR':'symbol':'1.2-2' }}</p>
+<p>Prijs: {{ prijs | currency:'USD':'code':'1.0-0' }}</p>
+```
+Uitleg:
+- `'EUR'` en `'USD'`: de valuta die je wilt gebruiken
+- `'symbol'` toont het valutateken (€ of $), `'code'` toont de valutacode (EUR of USD)
+- `'1.2-2'` betekent minimaal 1 cijfer voor de komma, minimaal 2 en maximaal 2 cijfers na de komma (dus exact 2 decimalen)
+- `'1.0-0'` betekent minimaal 1 cijfer voor de komma en geen cijfers na de komma (hele getallen)
+
+#### `percent`-pipe
+```html
+<p>Percentage: {{ ratio | percent:'1.0-2' }}</p>
+```
+Uitleg:
+- `ratio` is een decimaal getal (bijv. 0.25 voor 25%)
+- `'1.0-2'` betekent minimaal 1 cijfer voor de komma, minimaal 0 en maximaal 2 cijfers na de komma
+
+### Locale en Europese Context
+Standaard gebruikt Angular de Amerikaanse notatie voor datums en getallen. Om Europese notatie te gebruiken, moet je de juiste locale instellen in je applicatie. Je zou dit kunnen instellen op elke pipe, maar het is handiger om dit te doen in `app.config.ts` zodat het voor de hele applicatie geldt. Hier voegen we dit toe aan de providers:
+```ts
+// src/app/app.config.ts
+//highlight-next-line
+import { ApplicationConfig, LOCALE_ID, DEFAULT_CURRENCY_CODE} from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+//highlight-start
+import { registerLocaleData } from '@angular/common';
+import localeNLBE from '@angular/common/locales/nl-BE';
+
+registerLocaleData(localeNlBE);
+//highlight-end
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes)
+    //highlight-start
+    { provide: LOCALE_ID, useValue: 'nl-BE' },
+    { provide: DEFAULT_CURRENCY_CODE, useValue: 'EUR' }
+    //highlight-end
+  ]
+};
+```
+
+Hiermee stel je de locale in op Nederlands (België) en de standaardvaluta op Euro. Hierdoor zullen alle pipes die datums of valuta formatteren automatisch de juiste notatie gebruiken zonder dat je dit telkens hoeft te specificeren in elke pipe. Doordat deze configuratie wordt gebootstrapped in `main.ts`, geldt dit voor de hele applicatie.
+
+Nu kan je in je templates gewoon de pipes gebruiken zonder telkens de locale of valuta te hoeven specificeren:
+```html
+<p>Vandaag is {{ today | date:'fullDate' }}</p>
+<p>Prijs: {{ prijs | currency:'symbol':'1.2-2' }}</p>
+``` 
+### Custom Pipes
+Je kunt ook je eigen pipes maken voor specifieke transformaties die niet door de ingebouwde pipes worden gedekt. Dit doe je met het commando `ng generate pipe`, bijvoorbeeld:
+```bash
+ng generate pipe omgekeerd
+```
+```ts
+// src/app/pipes/omgekeerd-pipe.ts
+import { Pipe, PipeTransform } from '@angular/core';
+
+@Pipe({
+  name: 'omgekeerd'
+})
+export class OmgekeerdPipe implements PipeTransform {
+
+  transform(value: unknown, ...args: unknown[]): unknown {
+    if (typeof value === 'string') {
+      return value.split('').reverse().join('');
+    }
+    return value;
+  }
+
+}
+```
+Uitleg:
+- `@Pipe` decorator definieert een nieuwe pipe met de naam `omgekeerd
+- `PipeTransform` interface vereist dat je een `transform`-methode implementeert
+- In `transform` controleren we of de waarde een string is en keren we deze om met `split`, `reverse` en `join`.
+
+Om de pipe nu te gebruiken in een component, moet je ervoor zorgen dat de pipe is opgenomen in de `imports` van dat component:
+```ts
+// src /app/product/product.ts
+import { Component } from '@angular/core';
+import { OmgekeerdPipe } from '../pipes/omgekeerd-pipe';
+@Component({
+  selector: 'app-product',
+  imports: [OmgekeerdPipe],
+  templateUrl: './product.html',
+  styleUrl: './product.css',
+})
+export class Product {
+  naam = 'John Doe';
+}
+```
+Je kunt deze pipe nu gebruiken in je templates:
+```html
+<!-- src/app/product/product.html -->
+<p>Omgekeerde naam: {{ naam | omgekeerd }}</p>
+```
+
+Een tweede voorbeeld van een custom pipe is een formatter voor IBAN-nummers:
+```ts// src/app/pipes/iban-pipe.ts
+import { Pipe, PipeTransform } from '@angular/core';
+@Pipe({
+  name: 'iban'
+})
+export class IbanPipe implements PipeTransform {
+  transform(value: string): string {
+    if (!value) return value;
+    return iban.replace(/\s+/g, '').match(/.{1,4}/g)?.join(' ') || value;
+}
+}
+```
+Uitleg:
+- De `IbanPipe` verwijdert eerst alle spaties uit het IBAN-nummer
+- Vervolgens wordt het nummer in groepen van 4 tekens verdeeld met een regex en weer samengevoegd met spaties
+- Dit maakt het IBAN-nummer leesbaarder
+
+```html
+<p>IBAN: {{ ibanNummer | iban }}</p>
+```
+Hiermee wordt het IBAN-nummer netjes in groepen van vier tekens weergegeven, wat de leesbaarheid verbetert.
+
+

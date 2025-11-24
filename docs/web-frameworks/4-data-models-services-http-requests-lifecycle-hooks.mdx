@@ -1,0 +1,652 @@
+---
+id: wf-theo-4
+title: 4. Data modellen, services, HTTP-requests & lifecycle hooks
+sidebar_label: 4. Data modellen, services, HTTP-requests & lifecycle hooks
+---
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+In dit hoofdstuk behandelen we enkele geavanceerde concepten in moderne webontwikkeling met frameworks zoals Angular. We bespreken data modellen, services voor het beheren van data en logica, het uitvoeren van HTTP-requests naar backend-API's, en lifecycle hooks voor het beheren van componentlevenscycli.
+
+## 1. Data modellen
+Een data model is een TypeScript-interface of -class die beschrijft hoe data in je applicatie is gestructureerd. Het helpt bij het organiseren en valideren van gegevens die je van een backend ontvangt of naar een backend stuurt.
+Het is een contract tussen je component, service (zie later) en de API.
+```typescript
+export interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+```
+In dit voorbeeld definieert de `User` interface een data model met drie eigenschappen: `id`, `name` en `email`. Door dit model te gebruiken, weet je zeker dat de data die je verwerkt aan deze structuur voldoet.
+
+### Waarom data modellen gebruiken?
+Door data modellen te gebruiken, krijg je een duidelijke structuur. Fouten worden bij compilatie al opgespoord, ten opzichte van runtime, Autocompletion in je IDE wordt beter en je code wordt leesbaarder en onderhoudbaarder.
+
+<Tabs>
+<TabItem value="met data model" label="met data model">
+```typescript
+export interface User {
+    id: number;
+    name: string;
+    email: string;
+}
+```
+```typescript
+import { User } from './models/user-model';
+
+users : User[] = [
+    { id: 1, name: 'Alice', email: 'alice@example.com' },
+    { id: 2, name: 'Bob', email: 'bob@example.com'}
+];
+```
+De `users` array is nu getypeerd als een array van `User` objecten. Dit zorgt ervoor dat elk object in de array voldoet aan de structuur gedefinieerd in het `User` data model. Wanneer je probeert een object toe te voegen dat niet aan deze structuur voldoet, zal TypeScript een foutmelding geven tijdens het compileren.
+</TabItem>
+<TabItem value="zonder data model" label="zonder data model">
+```typescript
+users : any[] = [
+    { id: 1, name: 'Alice', email: 'alice@example.com'},
+    { id: 2, name: 'Bob', email: 'bob@example.com'},
+];
+```
+De `users` array is getypeerd als een array van `any` objecten. Dit betekent dat elk object in de array elke mogelijke structuur kan hebben. Hierdoor is er geen typecontrole, wat kan leiden tot fouten die pas tijdens runtime worden ontdekt.
+</TabItem>
+</Tabs>
+
+### models genereren
+Je kunt data modellen handmatig schrijven, maar Angular CLI biedt ook een handige manier om ze te genereren:
+```bash
+ng generate interface models/user --type=model
+```
+Dit maakt een bestand `user.model.ts` aan in de `models` map met een lege interface die je kunt invullen.
+```ts
+// src/app/models/user.model.ts
+export interface User {
+}
+```
+
+### Interfaces vs Classes
+Data modellen kunnen worden gedefinieerd als interfaces of classes. Het is belangrijk om te onderscheiden wanneer welke het beste wordt toegepast
+- **Interfaces**: Worden voornamelijk gebruikt voor typechecking en het definiëren van de structuur van data. Ze bestaan alleen tijdens de compileertijd en worden niet omgezet naar JavaScript. Gebruik interfaces wanneer je alleen de vorm van data wilt definiëren zonder extra functionaliteit.
+- **Classes**: Worden gebruikt wanneer je naast de structuur ook gedrag (methoden) wilt definiëren. Classes bestaan ook tijdens runtime en kunnen worden geïnstantieerd. Gebruik classes wanneer je extra functionaliteit of methoden aan je data model wilt toevoegen.
+
+Dit is hetzelfde `User` model als class:
+```typescript
+export class User {
+    constructor(
+        public id: number,
+        public name: string,
+        public email: string
+    ) {}
+
+    getDisplayName(): string {
+        return `${this.name} <${this.email}>`;
+    }
+}
+```
+Nu kan elke `User` instantie de `getDisplayName` methode aanroepen om een geformatteerde string te krijgen.
+In een template kan dit als volgt worden gebruikt:
+```html
+<p>{{ user.getDisplayName() }}</p>
+```
+
+## 2. Services
+Services zijn klassen die logica bevat die je wilt delen tussen verschillende componenten. Ze worden vaak gebruikt voor het beheren van data, het uitvoeren van HTTP-requests naar backend-API's, en het implementeren van bedrijfslogica. Componenten tonen de data via de UI, terwijl de services de data en logica beheren. Dit houdt componenten schooon, herbruikbaar en makkelijker te testen.
+
+### Een service maken
+Je kunt een service genereren met Angular CLI:
+```bash
+ng generate service services/user
+```
+Dit maakt een bestand `user.ts` aan in de `services` map met een lege service klasse.
+```typescript
+// src/app/services/user.ts
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class User {
+  
+}
+```
+:::tip
+Zoals je hierboven kan zien zal Angular standaard de service `User` noemen. Dit kan verwarrend zijn omdat we ook een data model `User` hebben. Het is aan te raden om services altijd met een `-service` suffix te benoemen, zoals `UserService`, om verwarring te voorkomen.
+:::
+### Dependency Injection
+Angular gebruikt dependency injection (DI) om services beschikbaar te maken voor componenten. Wanneer je een service in een component wilt gebruiken, voeg je deze toe aan de constructor van de component.
+Wanneer je een service markeert met `@Injectable({ providedIn: 'root' })`, zorgt Angular ervoor dat er een enkele instantie van de service wordt gedeeld in de hele applicatie (singleton patroon).
+```typescript
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class UserService {
+    getUsers() {
+        return [
+            { id: 1, name: 'Alice', email: 'alice@example.com' },
+            { id: 2, name: 'Bob', email: 'bob@example.com'}
+        ];
+    }
+}
+```
+Om de `UserService`-service in een component te gebruiken, moet je deze injecteren via de constructor:
+```typescript
+// src/app/user-list/user-list.ts
+import { Component } from '@angular/core';
+import { UserService } from '../services/user';
+
+@Component({
+  selector: 'app-user-list',
+  imports: [],
+  templateUrl: './user-list.html',
+  styleUrl: './user-list.css',
+})
+export class UserList {
+  users: any[] = [];
+
+  constructor(private userService: UserService) {
+    this.users = this.userService.getUsers();
+  }
+}
+```
+Om te testen dat het werkt kun je de `users` in de template weergeven:
+```html
+<!-- src/app/user-list/user-list.html-->
+<ul>
+   @for (user of users; let i = $index; track user.id) {
+        <li>
+        <h3>{{ user.name }}</h3>
+        <p>Email: {{ user.email }}</p>
+        </li>
+   }
+</ul>
+```
+
+### Services voor communicatie tussen componenten
+Soms moeten componenten met elkaar communiceren. Wanneer dit een parent-child relatie is, kunnen input- en outputdecorators worden gebruikt. Maar voor componenten die geen directe relatie hebben, kunnen services worden gebruikt om data en gebeurtenissen te delen.
+
+Stel dat we een `CartService` willen maken om een winkelwagen te beheren:
+- We moeten vanuit de component `ProductList` items aan de winkelwagen kunnen toevoegen.
+- We moeten vanuit de component `CartView` de items in de winkelwagen kunnen bekijken.
+
+```typescript
+// src/app/services/cart.ts
+import { Injectable } from '@angular/core';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class CartService {
+  private items: string[] = [];
+
+  addItem(item: string) {
+    this.items.push(item);
+  }
+
+  getItems(): string[] {
+    return this.items;
+  }
+}
+```
+In de `ProductList` component kunnen we de `CartService` gebruiken om items toe te voegen:
+```typescript
+// src/app/product-list/product-list.ts
+import { Component } from '@angular/core';
+import { CartService } from '../services/cart';
+
+@Component({
+  selector: 'app-product-list',
+  imports: [],
+  templateUrl: './product-list.html',
+  styleUrl: './product-list.css',
+})
+export class ProductList {
+  products : string[] = ['apple', 'banana', 'orange'];
+  constructor(private cartService: CartService) {}
+
+  addToCart(product: string) {
+    this.cartService.addItem(product);
+    console.log(`${product} added to cart.`);
+  }
+}
+```
+In de html template van `ProductList` kunnen we een knop toevoegen om producten aan de winkelwagen toe te voegen:
+```html
+<!-- src/app/product-list/product-list.html -->
+<ul>
+    @for (product of products; let i = $index; track i) {
+        <li>
+            <h3>{{ product }}</h3>
+            <button (click)="addToCart(product)">Add to Cart</button>
+        </li>
+    }
+</ul>
+```
+In de `CartView` component kunnen we de `CartService` gebruiken om de items in de winkelwagen weer te geven:
+```typescript
+// src/app/cart-view/cart-view.ts
+import { Component } from '@angular/core';
+import { CartService } from '../services/cart';
+
+@Component({
+  selector: 'app-cart-view',
+  imports: [],
+  templateUrl: './cart-view.html',
+  styleUrl: './cart-view.css',
+})
+export class CartView {
+  cartItems: string[] = [];
+  constructor(private cartService: CartService) {
+    this.cartItems = this.cartService.getItems();
+  }
+}
+```
+In de html template van `CartView` kunnen we de items in de winkelwagen weergeven
+```html
+<ul>
+    @for (product of cartItems; let i = $index; track i) {
+        <li>{{ product }}</li>
+    }
+</ul>
+```
+
+## 3. HTTP-requests
+In Angular worden HTTP-requests uitgevoerd met de `HttpClient` service, die deel uitmaakt van het `@angular/common/http` pakket. Hiermee kun je eenvoudig communiceren met backend-API's om data op te halen of te verzenden.
+We gebruiken een publieke API als voorbeeld: https://fakestoreapi.com
+
+### HTTPClientModule importeren
+Om `HttpClient` te gebruiken, moet je eerst de `provideHTTPClient` toevoegen aan `app.config.ts`;
+```typescript
+// src/app/app.config.ts
+import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
+import { provideRouter } from '@angular/router';
+import { routes } from './app.routes';
+// highlight-next-line
+import { provideHttpClient } from '@angular/common/http';
+
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideBrowserGlobalErrorListeners(),
+    provideZoneChangeDetection({ eventCoalescing: true }),
+    provideRouter(routes),
+    // highlight-next-line
+    provideHttpClient()
+  ]
+};
+```
+Nu is `HTTPClient` beschikbaar voor injectie in je services en componenten.
+
+### Een HTTP-service maken
+Laten we een service maken die producten ophaalt van de Fake Store API:
+```typescript
+// src /app/product/product.ts
+import { Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class ProductService {
+  private apiUrl = 'https://fakestoreapi.com/products';
+  
+  constructor(private http: HttpClient) {}
+
+  getProducts(): Observable<Product[]> {
+    return this.http.get<Product[]>(this.apiUrl);
+  }
+}
+```
+De `getProducts` methode maakt een GET-request naar de API en retourneert een Observable die een array van producten bevat.
+
+:::Note
+Merk op: In dit voorbeed is de `string` van eerder vervangen door een `Product` model. Dit is een goed voorbeeld van hoe data modellen kunnen worden gebruikt in combinatie met HTTP-requests om typeveiligheid te garanderen.
+```ts
+// src/app/models/product.model.ts
+export interface Product {
+  id: number;
+  title: string;
+  price: number;
+}
+```
+:::
+
+## 4. Observables
+
+### Wat is een Observable?
+Een Observable is een datastroom.
+Je kan het vergelijken met een nieuwsbrief. Je abonneert je op een nieuwsbrief (subscribe) en elke keer als er een nieuwe editie uitkomt (data beschikbaar is), ontvang je deze automatisch in je inbox (je callback wordt aangeroepen). Je kunt je ook afmelden voor de nieuwsbrief (unsubscribe) als je geen updates meer wilt ontvangen.
+
+In Angular worden Observables veel gebruikt voor het afhandelen van asynchrone operaties, zoals HTTP-requests. De `HttpClient` service retourneert bijvoorbeeld Observables die je kunt subscriben om de resultaten van een request te ontvangen.
+```typescript
+this.http.get<any[]>(this.apiUrl).subscribe((data) => {
+    console.log(data);
+});
+```
+In dit voorbeeld maken we een GET-request naar een API en subscriben we op de Observable die wordt geretourneerd. Wanneer de data beschikbaar is, wordt de callback-functie aangeroepen met de ontvangen data.
+
+:::info
+**RxJs** is een library voor datastromen (Observables). Angular gebruikt RxJS voor:
+- HttpClient
+- Event
+- Forms
+- Routing
+Je kan data bewerken met operators zoals:
+- `map`: data aanpassen
+- `filter`: data filteren
+- `tap` iets doen zonder de data aan te passen
+:::
+
+### Observables in componenten
+Wanneer we een Observable in een component gebruiken, moeten we ervoer zorgen dat we subscriben en unsubscriben. Als we het voorbeeld van `getProducts` uit de vorige sectie bekijken, kunnen we dit in de `ProductList` component gebruiken als volgt:
+```typescript
+// src/app/product-list/product-list.ts
+import { Component } from '@angular/core';
+import { CartService } from '../services/cart';
+import { ProductService } from '../services/product';
+import { Product } from '../models/product.model';
+
+@Component({
+  selector: 'app-product-list',
+  imports: [],
+  templateUrl: './product-list.html',
+  styleUrl: './product-list.css',
+})
+export class ProductList {
+  products: Product[] = [];
+
+  constructor(private cartService: CartService,
+    private productService: ProductService
+  ) {
+    this.productService.getProducts().subscribe((products: Product[]) => {
+      this.products = products;
+    });
+  }
+
+  addToCart(product: Product) {
+    this.cartService.addItem(product);
+    console.log(`${product} added to cart.`);
+  }
+}
+```
+In de constructor van `ProductList` subscriben we op de Observable die wordt geretourneerd door `getProducts`. Wanneer de data beschikbaar is, wijzen we deze toe aan de `products` array.
+
+### unsubscribe
+Het is belangrijk om te onthouden dat je moet unsubscriben van Observables om geheugenlekken te voorkomen. In analagoie met de nieuwsbrief, als je je niet afmeldt, blijf je de nieuwsbrieven ontvangen, zelfs als je ze niet meer wilt lezen.
+In Angular componenten kunnen we dit doen als volgt:
+```typescript
+// src/app/product-list/product-list.ts
+import { Component } from '@angular/core';
+import { CartService } from '../services/cart';
+import { ProductService } from '../services/product';
+import { Product } from '../models/product.model';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-product-list',
+  imports: [],
+  templateUrl: './product-list.html',
+  styleUrls: ['./product-list.css'],
+})
+export class ProductList {
+  products: Product[] = [];
+  productSubscription: Subscription;
+  constructor(private cartService: CartService,
+    private productService: ProductService
+  ) {
+    this.productSubscription = this.productService.getProducts().subscribe((products: Product[]) => {
+      this.products = products;
+    });
+  }
+
+  addToCart(product: Product) {
+    this.cartService.addItem(product);
+    console.log(`${product} added to cart.`);
+  }
+  ngOnDestroy() {
+    this.productSubscription.unsubscribe();
+  }
+}
+```
+
+Zoals je hierboven ziet, slaan we de subscription op in een variabele `productSubscription`. In de `ngOnDestroy` lifecycle hook roepen we `unsubscribe` aan om ons af te melden van de Observable wanneer de component wordt vernietigd. (*We bespreken lifecycle hooks later in dit hoofdstuk.*)
+
+Dit zorgt echter voor veel boilerplate code. Gelukkig biedt Angular een eenvoudigere manier om dit te doen met de `async` pipe in templates, die automatisch unsubscribet wanneer de component wordt vernietigd. We zullen dit later in het hoofdstuk over templates behandelen.
+
+```html
+<!-- src/app/product-list/product-list.html -->
+<ul>
+    @for (product of products | async; let i = $index; track i) {
+        <li>
+            <h3>{{ product.title }}</h3>
+            <button (click)="addToCart(product)">Add to Cart</button>
+        </li>
+    }
+</ul>
+```
+Hiervoor moeten we in de component `products` de `AsyncPipe` importeren en de `getProducts` Observable direct toewijzen:
+```typescript
+// src/app/product-list/product-list.ts
+import { Component } from '@angular/core';
+import { CartService } from '../services/cart';
+import { ProductService } from '../services/product';
+import { Product } from '../models/product.model';
+import { Observable } from 'rxjs';
+import { AsyncPipe } from '@angular/common';
+
+@Component({
+  selector: 'app-product-list',
+  imports: [AsyncPipe],
+  templateUrl: './product-list.html',
+  styleUrls: ['./product-list.css'],
+})
+export class ProductList {
+  products!: Observable<Product[]>; 
+  constructor(private cartService: CartService,
+    private productService: ProductService
+  ) {
+    this.products = this.productService.getProducts();
+  }
+
+  addToCart(product: Product) {
+    this.cartService.addItem(product);
+    console.log(`${product.title} added to cart.`);
+  }
+
+}
+```
+In dit voorbeeld gebruiken we de `async` pipe in de template om automatisch te subscriben op de `products` Observable. Hierdoor hoeven we ons geen zorgen te maken over het handmatig unsubscriben, omdat de `async` pipe dit voor ons afhandelt wanneer de component wordt vernietigd.
+
+
+### Error handling
+
+Wanneer een HTTP-request faalt, moet je dit afhandelen. De `subscribe` methode accepteert ook een error callback:
+
+```typescript
+this.productService.getProducts().subscribe({
+  next: (products) => {
+    this.products = products;
+  },
+  error: (error) => {
+    console.error('Fout bij ophalen producten:', error);
+    // Toon foutmelding aan gebruiker
+  },
+  complete: () => {
+    console.log('Request voltooid');
+  }
+});
+```
+
+Je kunt ook RxJS operators gebruiken voor error handling:
+
+```typescript
+import { catchError, of } from 'rxjs';
+
+getProducts(): Observable<Product[]> {
+  return this.http.get<Product[]>(this.apiUrl).pipe(
+    catchError(error => {
+      console.error('API error:', error);
+      return of([]); // Retourneer lege array bij fout
+    })
+  );
+}
+```
+In dit voorbeeld gebruiken we de `catchError` operator om fouten af te handelen. Als er een fout optreedt, loggen we deze en retourneren we een lege array in plaats van de fout door te geven.
+
+## 5. Lifecycle hooks
+Lifecycle hooks zijn speciale methoden in Angular componenten en directives die worden aangeroepen op specifieke momenten in de levenscyclus van een component. Ze stellen je in staat om code uit te voeren tijdens verschillende fasen, zoals initialisatie, wijzigingen in input-eigenschappen, en vernietiging.
+
+### Waarom lifecycle hooks gebruiken?
+Lifecycle hooks zijn handig voor het uitvoeren van taken zoals:
+- Initialiseren van data wanneer een component wordt gemaakt.
+- Reageren op wijzigingen in input-eigenschappen.
+- Opruimen van resources wanneer een component wordt vernietigd.
+- debugging en prestatieoptimalisatie.
+Niet elke hook is in elke situatie nodig, maar ze bieden flexibiliteit en controle over het gedrag van je componenten.
+
+### Levenscyclus van een component
+Een component doorloopt de volgende fasen in zijn levenscyclus:
+- `ngOnChanges`: Wordt aangeroepen wanneer een input-eigenschap verandert.
+- `ngOnInit`: Wordt aangeroepen na de eerste `ngOnChanges`.
+- `ngDoCheck`: Wordt aangeroepen tijdens elke change detection run.
+- `ngAfterContentInit`: Wordt aangeroepen nadat content (ng-content) is geïnitialiseerd.
+- `ngAfterContentChecked`: Wordt aangeroepen nadat content is gecontroleerd.
+- `ngAfterViewInit`: Wordt aangeroepen nadat de component's view en child views zijn geïnitialiseerd.
+- `ngAfterViewChecked`: Wordt aangeroepen nadat de component's view en child views zijn gecontroleerd.
+- `ngOnDestroy`: Wordt aangeroepen vlak voordat de component wordt vernietigd (verwijderd uit de DOM).
+
+### `ngOnInit`
+De `ngOnInit` hook is een van de meest gebruikte lifecycle hooks. Het wordt aangeroepen nadat de component is geïnitialiseerd en is een goede plek om initiële data op te halen of setup-taken uit te voeren.
+```typescript
+
+// src/app/components/product-list/product-list.ts
+import { Component, OnInit } from '@angular/core';
+import { CartService } from '../services/cart';
+import { ProductService } from '../services/product';
+import { Product } from '../models/product.model';
+import { Observable } from 'rxjs';
+import { AsyncPipe } from '@angular/common';
+
+@Component({
+  selector: 'app-product-list',
+  imports: [AsyncPipe],
+  templateUrl: './product-list.html',
+  styleUrls: ['./product-list.css'],
+})
+export class ProductList implements OnInit{
+  products: Observable<Product[]> = new Observable<Product[]>();
+  constructor(private Service: CartService,
+    private productService: ProductService
+  ) {
+    
+  }
+  //highlight-start
+  ngOnInit() {
+    this.products = this.productService.getProducts();
+  }
+  //highlight-end
+
+  addToCart(product: Product) {
+    this.Service.addItem(product);
+    console.log(`${product.title} added to cart.`);
+  }
+
+}
+```
+In dit voorbeeld implementeren we de `OnInit` interface en definiëren we de `ngOnInit` methode. Hier halen we de producten op zodra de component is geïnitialiseerd.
+
+### `ngOnDestroy`
+De `ngOnDestroy` hook wordt aangeroepen vlak voordat een component wordt vernietigd. Dit is een goede plek om opruimwerkzaamheden uit te voeren, zoals het unsubscriben van Observables of het verwijderen van event listeners.
+```typescript
+// src/app/product-list/product-list.ts
+import { Component, onDestroy } from '@angular/core';
+import { CartService } from '../services/cart';
+import { ProductService } from '../services/product';
+import { Product } from '../models/product.model';
+import { Subscription } from 'rxjs';
+
+@Component({
+  selector: 'app-product-list',
+  imports: [],
+  templateUrl: './product-list.html',
+  styleUrls: ['./product-list.css'],
+})
+// highlight-next-line
+export class ProductList implements OnDestroy {
+  products: Product[] = [];
+  productSubscription: Subscription;
+  constructor(private cartService: CartService,
+    private productService: ProductService
+  ) {
+    this.productSubscription = this.productService.getProducts().subscribe((products: Product[]) => {
+      this.products = products;
+    });
+  }
+
+  addToCart(product: Product) {
+    this.cartService.addItem(product);
+    console.log(`${product} added to cart.`);
+  }
+
+  // highlight-start
+  ngOnDestroy() {
+    this.productSubscription.unsubscribe();
+  }
+  // highlight-end
+}
+```
+In dit voorbeeld gebruiken we de `ngOnDestroy` hook om ons af te melden van de `productSubscription` wanneer de component wordt vernietigd. Dit voorkomt geheugenlekken door ervoor te zorgen dat we niet langer luisteren naar de Observable nadat de component is verwijderd.
+
+### `ngOnChanges`
+De `ngOnChanges` hook wordt aangeroepen wanneer een input-eigenschap van een component verandert. Dit is handig wanneer je wilt reageren op wijzigingen in de data die aan de component wordt doorgegeven.
+```typescript
+import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+
+@Component({
+  selector: 'app-profiel',
+  template: 'profiel.html',
+  styleUrl: 'profiel.css',
+})
+
+export class ProfielComponent implements OnChanges {
+  @Input() userId: number = 0;
+
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['userId']) {
+      const newUserId = changes['userId'].currentValue;
+      console.log(`userId is veranderd naar: ${newUserId}`);
+    }
+  }
+}
+```
+```html
+<!-- src/app/profiel/profiel.html -->
+<p>Gebruiker ID: {{ userId }}</p>
+```
+In dit voorbeeld implementeren we de `OnChanges` interface en definiëren we de `ngOnChanges` methode. Wanneer de `userId` input-eigenschap verandert, loggen we de nieuwe waarde naar de console.
+In de parent component kunnen we de `userId` binden en wijzigen:
+```html
+<!-- src/app/dashboard/dashboard.html -->
+<app-profiel [userId]="selectedUserId"></app-profiel>
+<button (click)="changeUser()">Verander gebruiker</button>
+```
+```typescript
+// src/app/dashboard/dashboard.ts
+import { Component } from '@angular/core';
+
+@Component({
+  selector: 'app-dashboard',
+  templateUrl: './dashboard.html',
+  styleUrl: './dashboard.css',
+})
+export class DashboardComponent {
+  selectedUserId: number = 1;
+  changeUser() {
+    this.selectedUserId = this.selectedUserId === 1 ? 2 : 1;
+  }
+}
+```
+Wanneer de gebruiker op de knop klikt, verandert de `selectedUserId`, wat de `ngOnChanges` hook in de `ProfielComponent` activeert.
+

@@ -1,0 +1,139 @@
+---
+id: py-theo-3
+title: 3. Inleiding tot Flask
+sidebar_label: 3. Inleiding tot Flask
+---
+
+In dit hoofdstuk maken we kennis met `Flask`, een populair webframework voor Python. We bespreken de basisconcepten van Flask, hoe je een eenvoudige webapplicatie kunt opzetten, en enkele van de belangrijkste functies en extensies die Flask biedt.
+
+## 1. Wat is Flask?
+`Flask` is een lichtgewicht webframework voor Python waarmee je snel webapplicaties kunt bouwen. Het is ontworpen om eenvoudig en uitbreidbaar te zijn en is ideaal voor kleine tot middlegrote projecten. 
+
+Flask geeft ontwikkelaars de vrijheid om eigen keuzes te maken over database-integratie, authenticatie en andere componenten. Je voegt alleen toe wat je nodig hebt via extensies, wat resulteert in lichte en efficiënte applicaties. Het framework is ideaal voor beginners omdat het gemakkelijk te leren is en snel op te zetten, maar biedt tegelijk genoeg kracht voor professionele projecten.
+
+
+## 2. Installatie van Flask
+Je kunt Flask eenvoudig installeren met `pip`.
+```bash
+pip install Flask
+```
+Je kan controleren of Flask correct is geïnstalleerd door de volgende code uit te voeren:
+
+```python
+import flask
+print(flask.__version__)
+```
+## 3. Een eenvoudige Flask-applicatie
+We beginnen met het maken van een eenvoudige "Hello, World!"-applicatie in Flask. Maak een nieuw Python-bestand aan, bijvoorbeeld `app.py`, en voeg de volgende code toe:
+
+```python
+from flask import Flask
+app = Flask(__name__)
+
+@app.route('/')
+def hello_world():
+    return 'Hello, World!'
+
+if __name__ == '__main__':
+    app.run(debug=True)
+```
+In deze code:
+- We importeren de `Flask`-klasse en maken een nieuwe applicatie aan.
+- We definiëren een route (`/`) die de functie `hello_world` aanroept wanneer deze route wordt bezocht.
+- De functie retourneert de tekst "Hello, World!" als antwoord.
+- We starten de applicatie met `app.run()`, waarbij `debug=True` ervoor zorgt dat we gedetailleerde foutmeldingen krijgen tijdens het ontwikkelen.
+Om de applicatie uit te voeren, gebruik je het volgende commando in de terminal:
+
+```bash
+python app.py
+```
+De applicatie is nu beschikbaar op `http://127.0.0.1:5000/`. Wanneer je deze URL bezoekt in je webbrowser, zou je "Hello, World!" moeten zien.
+
+## 4. Routes en URL's
+Routes koppelen URL's aan Python-functies. Je definieert routes met de `@app.route()` decorator:
+
+```python
+@app.route('/')
+def home():
+    return 'Homepage'
+
+@app.route('/about')
+def about():
+    return 'Over ons pagina'
+
+@app.route('/contact')
+def contact():
+    return 'Contactpagina'
+```
+Elke route correspondeert met een specifieke URL. Wanneer een gebruiker naar `/about` navigeert, wordt de `about()` functie uitgevoerd.
+
+### Variabele URL's
+Flask ondersteunt variabele URL's waarmee je dynamische waarden kunt doorgeven:
+
+```python
+@app.route('/user/<username>')
+def show_user(username):
+    return f'Profiel van {username}'
+
+@app.route('/post/<int:post_id>')
+def show_post(post_id):
+    return f'Bericht met ID: {post_id}'
+
+@app.route('/product/<float:price>')
+def show_price(price):
+    return f'Prijs: €{price:.2f}'
+```
+
+Type converters zoals `<int:post_id>` zorgen ervoor dat Flask automatisch de waarde naar het juiste type converteert. Beschikbare converters zijn:
+- `string` (standaard)
+- `int`
+- `float`
+- `path` (accepteert slashes)
+- `uuid`
+
+## 5. HTTP-methoden
+Flask ondersteunt verschillende HTTP-methoden zoals GET en POST. Standaard accepteert een route alleen GET requests:
+
+```python
+from flask import Flask, request
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        return 'Inloggen via POST'
+    return 'Inloggen via GET'
+```
+Hier accepteren we zowel GET als POST requests op de `/login` route. Afhankelijk van de methode die wordt gebruikt, voeren we verschillende acties uit.
+
+## 6. Templates gebruiken
+We kunnen buiten tekst ook HTML renderen en retourneren
+
+```python
+from flask import render_template
+@app.route('/')
+def home():
+    return '''
+    <h1>Welkom!</h1>
+    '''
+```
+Voor complexere HTML is het beter om templates te gebruiken. Flask maakt gebruik van Jinja2 als templating engine. Maak een map genaamd `templates` en voeg een bestand `index.html` toe:
+
+```html
+<!-- templates/index.html-->
+<!doctype html>
+<html>
+    <head><title>Home</title></head>
+    <body>
+        <h1>Welkom op de homepage!</h1>
+    </body>
+</html>
+```
+Vervolgens kun je deze template renderen in je route:
+
+```python
+from flask import render_template
+@app.route('/')
+def home():
+    return render_template('index.html')
+```
+

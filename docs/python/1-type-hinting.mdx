@@ -1,0 +1,208 @@
+---
+id: py-theo-1
+title: 1. Type Hinting
+sidebar_label: 1. Type Hinting
+---
+In dit hoofdstuk behandelen we type hinting in Python, een manier om expliciet aan te geven welke datatypes variabelen, functies en methoden verwachten. Type hinting verbetert de leesbaarheid van code, helpt bij het opsporen van fouten en maakt samenwerking tussen ontwikkelaars eenvoudiger.
+
+## 1. Wat is type hinting?
+Python is van oorsprong een dynamisch getypeerde taal, wat betekent dat variabelen geen vaste types hebben en tijdens runtime kunnen veranderen.
+
+Neem bijvoorbeeld de volgende code:
+
+```python
+def add(a, b):
+    return a + b
+```
+Hier kunnen `a` en `b` van elk type zijn dat de `+`-operator ondersteunt, zoals integers, floats of strings. Dit maakt de functie flexibel, maar kan ook leiden tot onverwachte fouten als verkeerde types worden doorgegeven.
+
+De variabelen kunnen ook vrij van type veranderen:
+
+```python
+x = 10        # x is een integer
+x = "Hello"   # nu is x een string
+```
+
+Type hinting stelt ontwikkelaars in staat om expliciet aan te geven welke types verwacht worden, wat de code duidelijker maakt en helpt bij het opsporen van fouten voordat de code wordt uitgevoerd.
+Sinds Python 3.5 is type hinting beschikbaar via de `typing` module (via PEP 484).
+
+Het voordeel van type hinting is dat het de intentie van de code verduidelijkt. Het maakt het voor andere ontwikkelaars (en voor jezelf) makkelijker om te begrijpen wat voor soort data een functie verwacht en teruggeeft.
+
+Een nadeel is dat je de flexibiliteit van dynamische typing deels verliest. Voor eenvoudige scripts kan dit overbodig aanvoelen. Echter, in grotere codebases of bij samenwerking met meerdere ontwikkelaars wegen de voordelen vaak zwaarder dan de nadelen.
+
+:::warning[belangrijk]
+Type hints zijn niet hetzelfde als type checks tijdens runtime. Ze zijn voornamelijk bedoeld voor documentatie en tooling, zoals linters en IDE's, die de hints kunnen gebruiken om potentiële typefouten te detecteren.
+
+Python zal standaard geen typefouten gooien op basis van type hints. We zien later hoe we dit kunnen afdwingen met externe tools.
+:::
+
+## 2. Basisgebruik van type hinting
+
+### variabelen
+Je kunt type hints toevoegen aan variabelen door een dubbele punt `:` te gebruiken gevolgd door het type:
+```python
+age: int = 25
+name: str = "Alice"
+is_student: bool = True
+```
+Hier geeft `age: int` aan dat de variabele `age` een integer moet zijn, `name: str` geeft aan dat `name` een string is, en `is_student: bool` geeft aan dat `is_student` een boolean is.
+
+### functies
+Bij functies kun je type hints toevoegen aan parameters en de returnwaarde:
+```python
+def greet(name: str) -> str:
+    return f"Hello, {name}!"
+```
+Hier geeft `name: str` aan dat de parameter `name` een string moet zijn, en `-> str` geeft aan dat de functie een string teruggeeft.
+
+### lijsten en andere collecties
+Voor lijsten, sets, dictionaries en andere collecties kun je type hints gebruiken uit de `typing` module:
+```python
+from typing import List
+my_list: List[int] = [1, 2, 3]
+```
+Hier geeft `List[int]` aan dat `my_list` een lijst is die alleen integers bevat.
+```python
+from typing import Dict
+my_dict: Dict[str, int] = {"Alice": 25, "Bob": 30}
+```
+Hier geeft `Dict[str, int]` aan dat `my_dict` een dictionary is met strings als sleutels en integers als waarden.
+```python
+from typing import Set
+my_set: Set[str] = {"apple", "banana", "cherry"}
+```
+Hier geeft `Set[str]` aan dat `my_set` een set is die alleen strings bevat.
+
+### optionele types
+Soms kan een variabele of parameter meerdere types hebben, bijvoorbeeld een string of `None`. Je kunt hiervoor `Optional` gebruiken:
+```python
+from typing import Optional
+def get_username(user_id: int) -> Optional[str]:
+    if user_id == 1:
+        return "Alice"
+    else:
+        return None
+```
+Hier geeft `Optional[str]` aan dat de functie een string kan teruggeven of `None.
+
+### pipes
+Vanaf Python 3.10 kun je ook de pipe-operator `|` gebruiken om meerdere types aan te geven:
+```python
+    def get_first_character(name:str | int) ->str:
+        return str(name)[0]
+```
+Hier geeft `name: str | int` aan dat de parameter `name` een string of een integer kan zijn.
+
+### Any
+Als je niet zeker weet welk type een variabele kan hebben, kun je `Any` gebruiken:
+```python
+from typing import Any
+def process_data(data: Any) -> None:
+    print(data)
+```
+Hier geeft `data: Any` aan dat de parameter `data` elk type kan hebben. 
+
+## 3. Custom types
+Door gebruik te maken van classes kan je ook je eigen types definiëren en deze gebruiken in type hints:
+```python
+class Person:
+    def __init__(self, name: str, age: int):
+        self.name = name
+        self.age = age
+
+def celebrate_birthday(person: Person) -> None:
+    person.age += 1
+    print(f"Happy birthday, {person.name}! You are now {person.age} years old.")
+```
+Hier geeft `person: Person` aan dat de parameter `person` een instantie van de `Person` class moet zijn.
+
+:::info
+class methods kunnen  eveneens type hints gebruiken:
+```python
+class Calculator:
+    def add(self, a: int, b: int) -> int:
+        return a + b
+```
+:::
+
+### Type en NewType
+Wanneer je een class als type definiëert, gaat Python ervan uit dat je een instance van die klasse bedoelt.
+
+Soms wil je echter de klasse zelf als type gebruiken, bijvoorbeeld bij het werken met metaklassen of factories. In dat geval kun je `Type` uit de `typing` module gebruiken:
+```python
+from typing import Type
+def create_dice(dice_class: Type[Dice], sides: int) -> Dice:
+    return dice_class(sides)
+```
+Hier geeft `dice_class: Type[Dice]` aan dat de parameter `dice_class` een klasse is die een subclass van `Dice` is.
+
+Daarnaast kun je met `NewType` een nieuw type definiëren dat gebaseerd is op een bestaand type. Dit is handig voor het creëren van semantisch verschillende types die dezelfde onderliggende representatie hebben:
+```python
+from typing import NewType
+UserId = NewType('UserId', int)
+def get_user_name(user_id: UserId) -> str:
+    return f"User_{user_id}"
+```
+Hier definieert `UserId` een nieuw type dat gebaseerd is op `int`, maar semantisch anders is.
+
+## 4. Generics
+Generics stellen je in staat om functies en classes te maken die met verschillende types kunnen werken, terwijl ze toch typeveilig blijven. Dit is vooral handig bij het werken met collecties.
+
+### TypeVar
+Je kunt `TypeVar` gebruiken om een generiek type te definiëren:
+```python
+from typing import TypeVar
+T = TypeVar('T')
+def get_first_element(elements: List[T]) -> T:
+    return elements[0]
+```
+Hier geeft `List[T]` aan dat de functie een lijst van elementen van een willekeurig type `T` accepteert, en `-> T` geeft aan dat de functie een element van datzelfde type teruggeeft.
+
+### Generieke classes
+Je kunt ook generieke classes maken:
+```python
+from typing import Generic
+class Box(Generic[T]):
+    def __init__(self, content: T):
+        self.content = content
+    def get_content(self) -> T:
+        return self.content
+```
+Hier definieert `Box` een generieke class die een inhoud van type `T` kan bevatten. Je kunt nu `Box` gebruiken met verschillende types:
+```python
+int_box = Box[int](123)
+str_box = Box[str]("Hello")
+```
+
+## 5. pyright
+Zoals eerder vermeld, voert Python zelf geen type checks uit op basis van type hints. Om type hints effectief te gebruiken, kun je externe tools zoals `pyright` gebruiken. `pyright` is een snelle type checker voor Python die je code analyseert op basis van de type hints die je hebt toegevoegd.
+Je kunt `pyright` installeren via pip:
+```bash
+pip install pyright
+```
+Vervolgens kun je `pyright` uitvoeren in de terminal om je Python-bestanden te controleren:
+```bash
+pyright your_script.py
+```
+`pyright` zal eventuele typefouten melden op basis van de hints die je hebt toegevoegd. Dit helpt je om problemen vroegtijdig te identificeren en zorgt ervoor dat je code voldoet aan de verwachte types.
+
+Pyright voert je code niet uit, dus het heeft geen invloed op de runtime-prestaties. Het is een statische analyse tool die je helpt om de kwaliteit van je code te verbeteren door typefouten te detecteren voordat je de code uitvoert.
+
+## 6. Docstrings en type hinting
+Je kunt type hints ook combineren met docstrings om extra documentatie te bieden over de verwachte types. Dit kan vooral handig zijn voor ontwikkelaars die je code lezen zonder een type checker te gebruiken
+```python
+def multiply(a: int, b: int) -> int:
+    """
+    Multiply two numbers.
+
+    Args:
+        a (int): First number.
+        b (int): Second number.
+
+    Returns:
+        int: Product of a and b.
+    """
+    return a * b
+```
+Hier geven de type hints aan dat zowel `a` als `b` integers zijn, en dat de functie een integer teruggeeft. De docstring biedt aanvullende uitleg over de parameters en de returnwaarde.
+Eventuele returnwaarden en foutmeldingen kunnen ook in de docstring worden beschreven voor extra duidelijkheid.

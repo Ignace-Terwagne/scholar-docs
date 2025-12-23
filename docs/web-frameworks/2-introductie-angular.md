@@ -281,7 +281,7 @@ Het belangrijkste om te begrijpen is dat dit **alleen een wijziging in de bestan
 :::
 
 ### Feature-maps en componentorganisatie
-Wanneer je een component genereert met de Angular CLI maakt de CLI automatisch een eigen map `src/app/<component-naam>` aan en plaatst daarin de bestanden. HIerdoor zijn de bestanden van één component netjes gegroepeerd.
+Wanneer je een component genereert met de Angular CLI maakt de CLI automatisch een eigen map `src/app/<component-naam>` aan en plaatst daarin de bestanden. Hierdoor zijn de bestanden van één component netjes gegroepeerd.
 
 Voor grotere features kan je meerdere componenten groeperen in één feature-map:
 ```
@@ -573,7 +573,7 @@ export class Profiel {
 <button (click)="veranderNaam()">Verander naam</button>
 ```
 - `[(naam)]="gebruiker"` combineert property binding (`@Input()`) en event binding (`@Output()`).
-- Wanneer het child-component de naam wijzigt, wordt het parent-component auotomatisch bijgewerkt.
+- Wanneer het child-component de naam wijzigt, wordt het parent-component automatisch bijgewerkt.
 - Dankzij Angular’s reactiviteit wordt de UI direct aangepast.
 
 :::info

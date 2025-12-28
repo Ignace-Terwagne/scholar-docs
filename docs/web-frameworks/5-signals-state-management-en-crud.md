@@ -228,6 +228,7 @@ Nu kunnen we deze `CartStore` service gebruiken in verschillende componenten om 
 // src/app/components/product-list/product-list.ts
 import { Component } from '@angular/core';
 import { CartStore } from '../../services/cart-store';
+import { inject } from '@angular/core';
 export class ProductList {
     private cartStore = inject(CartStore);
     addToCart(product: string) {
@@ -239,11 +240,12 @@ export class ProductList {
 
 ```typescript
 // src/app/components/cart/cart.ts
-import { Component } from '@angular/core';
+import { inject, Component } from '@angular/core';
 import { CartStore } from '../../services/cart-store';
 export class Cart {
   items = this.cartStore.items;
-    constructor(private cartStore: CartStore) {}
+    cartStore = inject(CartStore);
+    constructor() {}
     clearCart() {
         this.cartStore.clearItems();
     }
@@ -379,9 +381,10 @@ Nu kunnen we deze `ProductStore` gebruiken in een component om de producten weer
 // src/app/components/product-list/product-list.ts
 import { Component } from '@angular/core';
 import { ProductStore } from '../../services/product-store';
+import { inject } from '@angular/core';
 export class ProductList {
     products = this.productStore.products;
-    constructor(private productStore: ProductStore) {}
+    private productStore = inject(ProductStore);
 }
 ```
 ```html
@@ -403,6 +406,7 @@ In plaats van zelf te subscriben op een observable, kun je de observable direct 
 ```typescript
 import { toSignal } from '@angular/core/rxjs-interop';
 import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
 
 @Injectable({ providedIn: 'root' })
 export class ProductStore {
@@ -429,13 +433,14 @@ Bij grotere applicaties splitsen we de state op in feature-stores, waarbij elke 
 Feature-stores kunnen elkaar injecteren zodat ze state of computed values kunnen delen. Dit maakt compositie van state mogelijk zonder alles in één grote store te stoppen.
 
 ```typescript
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { CartStore } from './cart-store';
 @Injectable({
   providedIn: 'root',
 })
 export class OrderStore {
-    constructor(private cartStore: CartStore) {}
+    private cartStore = inject(CartStore);
+    constructor() {}
     placeOrder() {
         const items = this.cartStore.items();
         // Verwerk de bestelling met de items uit de winkelwagen
@@ -579,7 +584,7 @@ In een echte applicatie komt data vaak van een externe bron, zoals een backend A
 Laten we een voorbeeld bekijken van een `TodoStore` die CRUD-operaties uitvoert via een externe API:
 ```typescript
 // src/app/services/todo-store.ts
-import { Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 @Injectable({
   providedIn: 'root',

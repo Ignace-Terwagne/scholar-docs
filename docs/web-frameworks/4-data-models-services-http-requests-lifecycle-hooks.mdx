@@ -238,7 +238,7 @@ In de `CartView` component kunnen we de `CartService` gebruiken om de items in d
 // src/app/cart-view/cart-view.ts
 import { Component } from '@angular/core';
 import { CartService } from '../services/cart';
-
+import { inject } from '@angular/core';
 @Component({
   selector: 'app-cart-view',
   imports: [],
@@ -292,10 +292,9 @@ Nu is `HTTPClient` beschikbaar voor injectie in je services en componenten.
 Laten we een service maken die producten ophaalt van de Fake Store API:
 ```typescript
 // src /app/product/product.ts
-import { Injectable } from '@angular/core';
+import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { inject } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
@@ -357,7 +356,7 @@ import { Component } from '@angular/core';
 import { CartService } from '../services/cart';
 import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
-
+import { inject } from '@angular/core';
 @Component({
   selector: 'app-product-list',
   imports: [],
@@ -404,7 +403,7 @@ export class ProductList {
   productSubscription: Subscription;
   private cartService = inject(CartService);
   private productService = inject(ProductService);
-  ) {
+  constructor() {
     this.productSubscription = this.productService.getProducts().subscribe((products: Product[]) => {
       this.products = products;
     });
@@ -532,13 +531,12 @@ De `ngOnInit` hook is een van de meest gebruikte lifecycle hooks. Het wordt aang
 ```typescript
 
 // src/app/components/product-list/product-list.ts
-import { Component, OnInit } from '@angular/core';
+import { inject, Component, OnInit } from '@angular/core';
 import { CartService } from '../services/cart';
 import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
 import { Observable } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
-import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-product-list',
@@ -570,12 +568,11 @@ In dit voorbeeld implementeren we de `OnInit` interface en definiëren we de `ng
 De `ngOnDestroy` hook wordt aangeroepen vlak voordat een component wordt vernietigd. Dit is een goede plek om opruimwerkzaamheden uit te voeren, zoals het unsubscriben van Observables of het verwijderen van event listeners.
 ```typescript
 // src/app/product-list/product-list.ts
-import { Component, onDestroy } from '@angular/core';
+import { inject, Component, onDestroy } from '@angular/core';
 import { CartService } from '../services/cart';
 import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
 import { Subscription } from 'rxjs';
-import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-product-list',

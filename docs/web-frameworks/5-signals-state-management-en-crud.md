@@ -229,12 +229,11 @@ Nu kunnen we deze `CartStore` service gebruiken in verschillende componenten om 
 import { Component } from '@angular/core';
 import { CartStore } from '../../services/cart-store';
 export class ProductList {
-  constructor(private cartStore: CartStore) {}
-
-  addToCart(product: string) {
-    this.cartStore.addItem(product);
-    console.log(`${product} added to cart.`);
-  }
+    private cartStore = inject(CartStore);
+    addToCart(product: string) {
+        this.cartStore.addItem(product);
+        console.log(`${product} added to cart.`);
+    }
 }
 ```
 
@@ -344,6 +343,7 @@ We gebruiken hier een endpoint `https://fakestoreapi.com/products` als voorbeeld
 import { Injectable, signal, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { inject } from '@angular/core';
 @Injectable({
   providedIn: 'root',
 })
@@ -357,9 +357,10 @@ interface Product {
     image: string;
 }
 export class ProductStore {
-  private _products = signal<any[]>([]);
-  readonly products = this._products.asReadonly();
-    constructor(private http: HttpClient) {
+    private _products = signal<any[]>([]);
+    readonly products = this._products.asReadonly();
+    private http = inject(HttpClient);
+    constructor() {
         this.loadProducts();
     }
 

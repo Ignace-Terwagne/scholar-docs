@@ -131,12 +131,12 @@ export class UserService {
     }
 }
 ```
-Om de `UserService`-service in een component te gebruiken, moet je deze injecteren via de constructor:
+Om de `UserService`-service in een component te gebruiken, moet je deze injecteren met de `inject` functie:
 ```typescript
 // src/app/user-list/user-list.ts
 import { Component } from '@angular/core';
 import { UserService } from '../services/user';
-
+import { inject } from '@angular/core';
 @Component({
   selector: 'app-user-list',
   imports: [],
@@ -145,8 +145,8 @@ import { UserService } from '../services/user';
 })
 export class UserList {
   users: any[] = [];
-
-  constructor(private userService: UserService) {
+  private userService = inject(UserService);
+  constructor() {
     this.users = this.userService.getUsers();
   }
 }
@@ -164,6 +164,16 @@ Om te testen dat het werkt kun je de `users` in de template weergeven:
 </ul>
 ```
 
+:::info
+We gebruiken `inject` om de services te injecteren. Dit is de nieuwe manier sinds Angular 16. Voorheen werd dependency injection gedaan via de constructor parameters.
+```typescript
+constructor(private userService: UserService) {
+    this.users = this.userService.getUsers();
+}
+```
+Soms zie je deze oudere syntax nog in tutorials en documentatie. Dit werkt nog steeds, maar het is aan te raden om de nieuwe `inject` functie te gebruiken voor een consistentere en modernere aanpak.
+Deze nieuwe manier zorgt ervoor dat je minder boilerplate code hebt in de constructor en maakt het duidelijker welke dependencies worden geïnjecteerd.
+:::
 ### Services voor communicatie tussen componenten
 Soms moeten componenten met elkaar communiceren. Wanneer dit een parent-child relatie is, kunnen input- en outputdecorators worden gebruikt. Maar voor componenten die geen directe relatie hebben, kunnen services worden gebruikt om data en gebeurtenissen te delen.
 
@@ -195,7 +205,7 @@ In de `ProductList` component kunnen we de `CartService` gebruiken om items toe 
 // src/app/product-list/product-list.ts
 import { Component } from '@angular/core';
 import { CartService } from '../services/cart';
-
+import { inject } from '@angular/core';
 @Component({
   selector: 'app-product-list',
   imports: [],
@@ -204,8 +214,7 @@ import { CartService } from '../services/cart';
 })
 export class ProductList {
   products : string[] = ['apple', 'banana', 'orange'];
-  constructor(private cartService: CartService) {}
-
+  private cartService = inject(CartService);
   addToCart(product: string) {
     this.cartService.addItem(product);
     console.log(`${product} added to cart.`);
@@ -238,7 +247,8 @@ import { CartService } from '../services/cart';
 })
 export class CartView {
   cartItems: string[] = [];
-  constructor(private cartService: CartService) {
+  private cartService = inject(CartService);
+  constructor() {
     this.cartItems = this.cartService.getItems();
   }
 }
@@ -285,14 +295,14 @@ Laten we een service maken die producten ophaalt van de Fake Store API:
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { inject } from '@angular/core';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductService {
   private apiUrl = 'https://fakestoreapi.com/products';
-  
-  constructor(private http: HttpClient) {}
+  private http = inject(HTTPClient)
 
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(this.apiUrl);
@@ -356,10 +366,9 @@ import { Product } from '../models/product.model';
 })
 export class ProductList {
   products: Product[] = [];
-
-  constructor(private cartService: CartService,
-    private productService: ProductService
-  ) {
+  private cartService = inject(CartService);
+  private productService = inject(ProductService);
+  constructor() {
     this.productService.getProducts().subscribe((products: Product[]) => {
       this.products = products;
     });
@@ -393,8 +402,8 @@ import { Subscription } from 'rxjs';
 export class ProductList {
   products: Product[] = [];
   productSubscription: Subscription;
-  constructor(private cartService: CartService,
-    private productService: ProductService
+  private cartService = inject(CartService);
+  private productService = inject(ProductService);
   ) {
     this.productSubscription = this.productService.getProducts().subscribe((products: Product[]) => {
       this.products = products;
@@ -435,6 +444,7 @@ import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
 import { Observable } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
+import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-product-list',
@@ -444,9 +454,9 @@ import { AsyncPipe } from '@angular/common';
 })
 export class ProductList {
   products!: Observable<Product[]>; 
-  constructor(private cartService: CartService,
-    private productService: ProductService
-  ) {
+  private cartService = inject(CartService);
+  private productService = inject(ProductService);
+  constructor() {
     this.products = this.productService.getProducts();
   }
 
@@ -528,6 +538,7 @@ import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
 import { Observable } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
+import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-product-list',
@@ -537,11 +548,9 @@ import { AsyncPipe } from '@angular/common';
 })
 export class ProductList implements OnInit{
   products: Observable<Product[]> = new Observable<Product[]>();
-  constructor(private Service: CartService,
-    private productService: ProductService
-  ) {
-    
-  }
+  private cartService = inject(CartService);
+  private productService = inject(ProductService);
+  
   //highlight-start
   ngOnInit() {
     this.products = this.productService.getProducts();
@@ -549,7 +558,7 @@ export class ProductList implements OnInit{
   //highlight-end
 
   addToCart(product: Product) {
-    this.Service.addItem(product);
+    this.cartService.addItem(product);
     console.log(`${product.title} added to cart.`);
   }
 
@@ -566,6 +575,7 @@ import { CartService } from '../services/cart';
 import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
 import { Subscription } from 'rxjs';
+import { inject } from '@angular/core';
 
 @Component({
   selector: 'app-product-list',
@@ -577,9 +587,9 @@ import { Subscription } from 'rxjs';
 export class ProductList implements OnDestroy {
   products: Product[] = [];
   productSubscription: Subscription;
-  constructor(private cartService: CartService,
-    private productService: ProductService
-  ) {
+  private cartService = inject(CartService);
+  private productService = inject(ProductService);
+  constructor() {
     this.productSubscription = this.productService.getProducts().subscribe((products: Product[]) => {
       this.products = products;
     });

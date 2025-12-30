@@ -1095,6 +1095,20 @@ Voordat we verder gaan met het gebruik van MongoDB, is het belangrijk om enkele 
 | Field        | Een sleutel-waarde paar binnen een document. Elk veld heeft een naam (sleutel) en een waarde, die verschillende datatypes kan hebben zoals string, nummer, boolean, array of genest document. |
 | ObjectId     | Uniek identificatienummer voor elk document. Wordt automatisch gegenereerd bij aanmaak en bevat o.a. een timestamp en unieke waarde. |
 
+```
+database
+    |--collection
+        |-- { _id: ObjectId, field1: value1, field2: value2, ... }
+        |-- { _id: ObjectId, field1: value1, field2: value2, ... }
+```
+
+bijvoorbeeld:
+```
+todo_db
+    |--tasks
+        |-- { _id: ObjectId("1"), title: "Task One", description: "This is task one" }
+        |-- { _id: ObjectId("2"), title: "Task Two", description: "This is task two" }
+```
 ### Mongo Shell
 MongoDB wordt geleverd met een command-line interface genaamd `mongo shell`. Hiermee kunnen we direct verbinding maken met de MongoDB server en database-operaties uitvoeren via de command-line. Dit is handig voor snelle tests en beheer van de database.
 Om de mongo shell te openen, kunnen we het volgende commando gebruiken in de terminal:
@@ -1109,6 +1123,9 @@ Om de mongo shell te openen, kunnen we het volgende commando gebruiken in de ter
     mongosh 
     ```
     Als je geen extra configuratie hebt gedaan, zal dit automatisch verbinding maken met de MongoDB server op `localhost:27017`.
+    </TabItem>
+    <TabItem value="mongodb-compass" label="MongoDB Compass">
+    Er zit ook een tab ingebouwd in MongoDB voor rechtsreekse shellcommando's. Dit kan je vinden als je op `>_` drukt naast de verbinding die je hebt gemaakt aan de linkerkant.
     </TabItem>
 </Tabs>
 Eenmaal in de mongo shell kunnen we verschillende commando's uitvoeren om databases en collecties te beheren. Hier zijn enkele basiscommando's:
@@ -1147,3 +1164,47 @@ db.tasks.updateOne({ title: 'Task One' }, { $set: { description: 'Updated descri
 db.tasks.deleteOne({ title: 'Task One' })
 db.tasks.find()
 ```
+Je kan ook zoeken of filteren op basis van velden, bijvoorbeeld:
+```mongodb
+db.tasks.insertOne({ title: 'Task Two', description: 'This is task two'})
+db.tasks.insertOne({ title: 'Task Three', description: 'This is task three'})
+db.tasks.find({ title: 'Task Two' })
+db.tasks.find({ description: { $regex: /three/ } })
+db.tasks.find({ _id: ObjectId("...") }) // vervang "..." door de juiste ObjectId
+```
+
+:::info
+Hier zien we CRUD-operaties ook terugkomen: Create (`insertOne`), Read (`find`), Update (`updateOne`) en Delete (`deleteOne`).
+:::
+
+### relaties
+In mongoDB zijn er geen traditionele joins zoals in relationele databases. In plaats daarvan kunnen we relaties tussen documenten op twee manieren modelleren: embedded documents en references.
+
+##### Embedded documents
+Embedded documents zijn documenten die zijn genest binnen een ander document. Dit is handig voor one-to-many relaties waarbij de gerelateerde data vaak samen wordt opgevraagd. Bijvoorbeeld, als we een taak hebben met meerdere opmerkingen, kunnen we de opmerkingen als een array van geneste documenten binnen het taakdocument opslaan:
+```json
+{
+    _id: ObjectId("..."),
+    title: "Task One",
+    description: "This is task one",
+    comments: [
+        { text: "This is the first comment", date: ISODate("2024-01-01T00:00:00Z") },
+        { text: "This is the second comment", date: ISODate("2024-01-02T00:00:00Z") }
+    ]
+}
+```
+##### References
+References zijn verwijzingen naar documenten in andere collecties. Dit is handig voor many-to-many relaties of wanneer de gerelateerde data niet vaak samen wordt opgevraagd. Bijvoorbeeld, als we gebruikers hebben die taken kunnen toewijzen, kunnen we een referentie naar de gebruiker opslaan in het taakdocument:
+```json
+{
+    _id: ObjectId("..."),
+    title: "Task One",
+    description: "This is task one",
+    assignedTo: ObjectId("...") // verwijzing naar een gebruiker in de users collectie
+}
+```
+Bij het gebruik van references moeten we vaak meerdere queries uitvoeren om de gerelateerde data op te halen. Bijvoorbeeld, om de gebruiker op te halen die aan een taak is toegewezen, moeten we eerst de taak opvragen en vervolgens de gebruiker op basis van de `assignedTo` referentie.
+
+
+### BSON
+BSON (Binary JSON) is het opslagformaat dat MongoDB gebruikt om documenten op te slaan. het is een binaire representatie van JSON-achtige documenten. BSON ondersteunt meer datatypes dan JSON, zoals `Date`, `Decimal128` en `Binary`, wat het geschikter maakt voor opslag in een database.

@@ -1,0 +1,1149 @@
+---
+id: wf-theo-6
+title: 6. back-end, NestJS en MongoDB
+sidebar_label: 6. back-end, NestJS en MongoDB
+---
+
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+
+:::info
+Dit hoofdstuk is opbouwend geschreven. Dit wilt zeggen dat je op sommige plaatsen niet direct de werkende code zal zien, of best practices. Dit is bewust zo gedaan om de concepten stap voor stap uit te leggen. Aan het einde van dit hoofdstuk zal je een volledig werkende back-end hebben met NestJS en MongoDB. Het is aan te raden om het hoofdstuk volledig in volgorde door te nemen en stapsgewijs mee te bouwen. 
+:::
+## 1. Front-end en back-end
+We hebben tot nu toe gezien hoe we een webapplicatie kunnen maken die elementen toont aan de gebruiker in de browser. Dit is wat we noemen de front-end van een webapplicatie. 
+We hebben ook gezien dat we data kunnen opslaan in de browser om te zorgen dat deze bewaard blijft als de gebruiker de pagina verlaat. Echter, deze data is alleen beschikbaar op dat specifieke apparaat en in die specifieke browser.
+Wat als de data beschikbaar moet zijn op meerdere apparaten of gedeeld moet worden met andere gebruikers? Dan gaan we dit sturen naar een server waar de data centraal opgeslagen en verwerkt kan worden. Dit noemen we de back-end van een webapplicatie.
+
+In een typische webapplicatie communiceert de front-end met de back-end via API's (Application Programming Interfaces). De front-end stuurt verzoeken naar de back-end om data op te halen of op te slaan, en de back-end verwerkt deze verzoeken en stuurt de benodigde data terug naar de front-end. We hebben dit al kort gezien bij het gebruik van asynchrone functies en fetch calls.
+
+In Angular maken we gebruik van de combinatie van Angular voor de front-end en Express of NestJS voor de back-end. Deze back-end draait op Node.js, een javascript runtime die het mogelijk maakt om JavaScript buiten de browser uit te voeren, bijvoorbeeld op een server.
+
+## 2. Tech-stacks
+Wanneer we een front-end en back-end combineren, spreken we van een tech-stack. Dit is een verzameling van technologieën die samen worden gebruikt om een volledige webapplicatie te bouwen. Er zijn verschillende populaire tech-stacks, elk met hun eigen voor- en nadelen. Hier zijn enkele voorbeelden:
+- **MEAN Stack**: MongoDB, Express.js, Angular, Node.js
+- **MERN Stack**: MongoDB, Express.js, React, Node.js
+- **LAMP Stack**: Linux, Apache, MySQL, PHP
+
+Je moet niet per se alle stacks te kennen en er is geen "beste" stack. Het belangrijkste is dat je begrijpt hoe de verschillende onderdelen samenwerken en dat je in staat bent om de juiste tools te kiezen voor jouw specifieke project.
+
+In deze cursus richten we ons op de **MEAN Stack**, waarbij we MongoDB gebruiken als database, Express.js of NestJS als back-end framework, Angular als front-end framework, en Node.js als runtime omgeving. De MEAN Stack staat ook bekend om het feit dat het volledig gebaseerd is op JavaScript. We kunnen dus dezelfde programmeertaal gebruiken voor zowel de front-end als de back-end, wat de ontwikkeling eenvoudiger maakt.
+
+Bij de MEAN-stack wordt data in JSON-formaat uitgewisseld tussen de front-end en back-end. JSON (JavaScript Object Notation) is een lichtgewicht dataformaat dat gemakkelijk te lezen en te schrijven is voor zowel mensen als machines. Het ziet er ongeveer zo uit:
+
+```json
+{
+  "naam": "Jan",
+  "leeftijd": 30,
+  "beroep": "Ontwikkelaar"
+}
+```
+
+## 3. Node.js
+JavaScript werd oorspronkelijk gemaakt om in de browser te draaien. In de browser zit JavaScript in een soort “veilige bubbel” (sandbox). Daardoor is het beperkt in wat het mag doen: het kan bijvoorbeeld niet zomaar aan je bestanden, je netwerk of je volledige systeem. Dat is bewust zo ontworpen, want JavaScript wordt uitgevoerd wanneer je een website bezoekt, en het zou een groot beveiligingsrisico zijn als websites volledige controle over je computer zouden krijgen.
+
+Node.js maakt het mogelijk om JavaScript buiten de browser uit te voeren, bijvoorbeeld op een server of op je eigen computer. Je kunt het zien als een programma dat JavaScript kan lezen en uitvoeren, net zoals de browser dat doet, maar dan zonder de beperkingen van die sandbox.
+
+Omdat Node.js bovenop de V8-engine van Google Chrome is gebouwd, is het snel, en krijg je er extra mogelijkheden bij: werken met bestanden, netwerkverkeer, processen en nog veel meer. Daardoor kun je met JavaScript niet alleen websites bouwen, maar ook backends, scripts, tools en complete applicaties draaien, zonder dat daar een browser voor nodig is.
+
+### npm
+npm staat voor Node Package Manager. Dit beheert de libraries en tools die je gebruikt in je Node.js-projecten. We hebben npm al eerder gebruikt bij het installeren van Angular en andere tools.
+```bash
+npm install -g @angular/cli
+```
+Ook tools zoals de Typescript-compiler worden via npm geïnstalleerd en beheerd:
+```bash
+npm install -g typescript
+```
+### Node in Angular
+Angular zelf draait ook op Node.js tijdens de ontwikkeling. Dit is een zogenaamde "development server" die je applicatie bouwt, aanbiedt (served) en automatisch herlaadt wanneer je wijzigingen aanbrengt. Wanneer je dan je applicatie bouwt voor productie (`ng build --prod`), wordt de code gecompileerd, zodat het in de moderne browser kan draaien zonder Node.js.
+
+## 4. Het service-patroon in Angular
+We hebben eerder al gezien dat we in Angular gebruik kunnen maken van services om logica en data te scheiden van de componenten. Om data te kunnen opslaan en ophalen hebben we het concept van mini-stores besproken. Deze mini-stores kunnen we uitbreiden om te communiceren met een back-end server.
+We kunnen een service maken die verantwoordelijk is voor het ophalen en opslaan van data via API calls naar onze back-end. Dit doen we met behulp van Angular's HttpClient module.
+
+Hier is een voorbeeld van een eenvoudige service die taken ophaalt en opslaat via een back-end API:
+
+```typescript
+// src/app/services/task-service.ts
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { Observable } from 'rxjs';
+import { Task } from '../models/task.model';
+@Injectable({
+  providedIn: 'root'
+})
+export class TaskService {
+    private apiUrl = 'http://localhost:3000/api/tasks';
+    private http = inject(HttpClient)
+    getTasks(): Observable<Task[]> {
+        return this.http.get<Task[]>(this.apiUrl);
+    }
+    getTask(): Observable<Task> {
+        return this.http.get<Task>(`${this.apiUrl}/${id}`);
+    }
+
+}
+```
+:::Info
+We maken gebruik van het model `Task` in dit voorbeeld. Dit model. De invulling hiervan bepaal je zelf, afhankelijk van de data waarmee je wilt werken. Bijvoorbeeld:
+```typescript
+// src/app/models/task.model.ts
+export interface Task {
+    id: number;
+    todo: string;
+    completed: boolean;
+}
+```
+:::
+:::warning
+Let op: Dit voorbeeld gaat nog niet werken, omdat we nog geen back-end server hebben opgezet die deze API aanbiedt. We zullen later in dit hoofdstuk zien hoe we een eenvoudige back-end kunnen opzetten met NestJS en MongoDB.
+:::
+We kunnen deze service vervolgens injecteren in onze componenten en gebruiken om taken op te halen en weer te geven:
+
+```typescript
+// src/app/components/task-list/task-list.ts
+import { inject, Component } from '@angular/core';
+import { TaskService } from '../../services/task-service';
+import { toSignal } from '@angular/core/rxjs-interop';
+
+@Component({
+  selector: 'app-task-list',
+  imports: [],
+  templateUrl: './task-list.html',
+  styleUrl: './task-list.css',
+})
+export class TaskList {
+    private taskService = inject(TaskService);
+    tasks = toSignal(this.taskService.getTasks(), { initialValue: [] });
+}
+```
+In dit voorbeeld gebruiken we de `TaskService` om taken op te halen van de back-end en deze weer te geven in de `TaskList` component. We maken gebruik van de `toSignal` functie om de Observable die wordt geretourneerd door `getTasks()` om te zetten naar een signaal dat we in onze template kunnen gebruiken.
+
+## 5. Wat is een API?
+API staat voor Application Programming Interface. Het is een set van regels en protocollen die bepalen hoe verschillende softwarecomponenten met elkaar kunnen communiceren. In de context van webontwikkeling verwijst een API meestal naar een web-API, die het mogelijk maakt voor verschillende applicaties om gegevens en functionaliteit uit te wisselen via het internet.
+Stel bijvoorbeeld dat je in een restaurant een maltijd bestelt. De ober fungeert als een API tussen jou en de keuken. Jij (de client) geeft je bestelling door aan de ober (de API) die deze vervolgens doorgeeft aan de keuken (de server). Wanneer je maaltijd klaar is, brengt de ober deze weer terug naar jou. Je hoeft niet te weten hoe de keuken werkt, of hoe de maaltijd wordt bereid om je bestelling te plaatsen, je vertrouwt erop dat de ober dit voor je regelt.
+
+### REST API's
+Er bestaan verschillende soorten API's maar de meest gebruikte in webontwikkeling zijn REST API's. REST staat voor Representational State Transfer. Deze term komt je misschien niet direct bekend voor, maar we hebben het al wel eerder gebruikt.
+
+REST API's maken gebruik van standaard HTTP-methoden zoals GET, POST, PUT, DELETE om acties uit te voeren op resources die worden voorgesteld in een webapplicatie. Elke resource wordt geïdentificeerd door een unieke URL. Bijvoorbeeld, in een taakbeheerapplicatie zou je de volgende endpoints kunnen hebben:
+- `GET /api/tasks`: Haalt een lijst op van alle taken.
+- `GET /api/tasks/{id}`: Haalt een specifieke taak op op basis van de ID.
+- `POST /api/tasks`: Maakt een nieuwe taak aan.
+- `PUT /api/tasks/{id}`: Werkt een bestaande taak bij op basis van de ID.
+- `DELETE /api/tasks/{id}`: Verwijdert een taak op basis van de ID.
+
+### Restful principes
+REST API's volgen een aantal principes om consistentie en eenvoud te waarborgen:
+- Elk request van de client naar de server moet alle informatie bevatten die nodig is om het request te begrijpen en te verwerken. Het mag dus geen context van eerdere requests vereisen.
+- De API beheert resources. Elke resource-group (zoals `tasks`, `users`, etc.) wordt vertegenwoordigd door een unieke URL.
+- Elke actie op een resource wordt uitgevoerd met behulp van standaard HTTP-methoden. Deze methoden mogen niet worden gebruikt voor een andere actie dan waarvoor ze bedoeld zijn. Bijvoorbeeld, een GET request mag geen data wijzigen op de server, en een POST request wordt gebruikt om nieuwe resources aan te maken.
+
+Wanneer een REST API strikt deze principes volgt, wordt het een "RESTful" API genoemd. Soms is het moeilijk om alle principes volledig te volgen, maar het streven naar RESTful ontwerp helpt bij het creëren van duidelijke en onderhoudbare API's.
+
+### Testen van API's
+Een GET request kan je eenvoudig testen in je browser door de URL in te voeren. Je browser zal dan standaard een GET request uitvoeren en de response tonen.
+Voor andere HTTP-methoden zoals POST, PUT en DELETE kan je gebruik maken van tools zoals (Postman)[https://www.postman.com/] of (Insomnia)[https://insomnia.rest/]. Deze tools bieden een gebruiksvriendelijke interface om verschillende soorten HTTP-requests te maken, headers en body data toe te voegen, en de responses van de server te bekijken. Ze zijn onmisbaar voor het testen en debuggen van API's tijdens de ontwikkeling.
+
+Soms heb je geen optie om een grafische tool te gebruiken, bijvoorbeeld wanneer je werkt op een server zonder grafische interface. In dat geval kan je gebruik maken van command-line tools zoals `curl`. Bijvoorbeeld, om een POST request te maken met `curl`, kan je de volgende command gebruiken:
+```bash
+curl -X POST http://localhost:3000/api/tasks -H "Content-Type: application/json" -d '{"todo": "Nieuwe taak", "completed": false}'
+```
+Dit stuurt een POST request naar de opgegeven URL met een JSON body die een nieuwe taak aanmaakt.
+
+## 6. Express.js 
+Express.js is een minimalistisch en flexibel webframework voor Node.js, dat zich richt op server-side webontwikkeling. Het maakt het eenvoudig om snel HTTP-servers en API's op te zetten. Express biedt handige functionaliteiten voor routing, middleware en error handling. Zo kun je bijvoorbeeld gemakkelijk verschillende routes definiëren, requests en responses verwerken met middleware, en fouten op een gestructureerde manier afhandelen. Omdat Express relatief lichtgewicht is en niet zo gestructureerd als sommige andere frameworks, geeft het ontwikkelaars veel vrijheid om hun eigen architectuur te kiezen. Dit betekent echter ook dat je meer zelf moet opzetten en organiseren om een overzichtelijke en onderhoudbare applicatie te bouwen.
+
+```typescript
+// server.ts
+import express from 'express';
+const app = express();
+const port = 3000;
+app.use(express.json());
+
+let tasks = []
+
+app.get('/api/tasks', (req, res) => {
+    res.json(tasks);
+});
+
+app.post('/api/tasks', (req, res) => {
+    const newTask = req.body;
+
+}    tasks.push(newTask);
+    res.status(201).json(newTask);
+});
+
+
+
+app.listen(port, () => {
+    console.log ("server running on http://localhost:" + port);)
+```
+In dit voorbeeld maken we een eenvoudige Express-server die luistert op poort 3000. We hebben twee routes gedefinieerd: een GET route om alle taken op te halen en een POST route om een nieuwe taak toe te voegen. We gebruiken `express.json()` middleware om JSON request bodies te kunnen verwerken.
+
+Hier komt de CRUD-flow terug: de GET route haalt alle taken op (Read) en de POST route voegt een nieuwe taak toe (Create). We zouden ook PUT en DELETE routes kunnen toevoegen om taken bij te werken en te verwijderen.
+
+### Dataflow 
+Als we de front-end en back-end combineren, ontstaat er een dataflow tussen de verschillende componenten van de applicatie. Hieronder zie je een diagram dat deze flow illustreert:
+1. De Angular component vraagt data op via de service.
+2. De service stuurt een HTTP-request naar de Express API.
+3. De API verwerkt de request en voert de benodigde business logica uit.
+4. De backend communiceert met de database om data op te halen of bij te werken.
+5. De database retourneert het resultaat aan de backend.
+6. De backend stuurt de data terug naar de API in JSON-formaat.
+7. De API stuurt het JSON-antwoord terug naar de Angular service.
+8. De service werkt de Signals bij met de ontvangen data.
+9. De Angular component wordt automatisch bijgewerkt dankzij de reactieve aard van Signals, waardoor de UI de nieuwste data toont.
+```mermaid
+---
+config:
+  theme: mc
+  look: classic
+---
+sequenceDiagram
+    autonumber
+    participant Component as Angular Component
+    participant Service as Angular Service
+    participant API as Express API
+    participant Backend as Backend
+    participant DB as Database
+
+    Component->>Service: Vraagt data op
+    Service->>API: HTTP-request
+    API->>Backend: Verwerkt business logica
+    Backend->>DB: Query / update database
+    DB-->>Backend: Resultaat
+    Backend-->>API: JSON data
+    API-->>Service: JSON antwoord
+    Service-->>Component: Update Signals
+    Component->>Component: UI update automatisch
+
+```
+
+
+In kleine applicaties kan het zijn dat er geen database is en dat de backend alleen maar eenvoudige logica uitvoert. In dat geval kan de backend direct data terugsturen zonder een database te raadplegen.
+
+## 7. Validatie en error handling
+Zoals eerder besproken draait onze back-end code in Node.js, dus buiten de browser. Dit betekent dat als een gebruiker erin zou slagen om kwaadaardige code naar onze back-end te sturen, deze code op de server kan worden uitgevoerd. Dat kan leiden tot ernstige beveiligingsproblemen, zoals datalekken of het overnemen van de server.
+Daarom is het cruciaal om altijd de binnenkomende data te valideren en te sanitiseren:
+- **Validatie** controleert of de ontvangen data voldoet aan de verwachte structuur en regels. Bijvoorbeeld: als we een taak verwachten met een `todo` veld van het type string en een `completed` veld van het type boolean, moeten we controleren of deze velden aanwezig zijn en van het juiste type zijn.
+- **sanitisatie** is het proces van het opschonen van de data om ervoor te zorgen dat er geen kwaadaardige code in zit. bijvoorbeeld, als we een string ontvangen die HTML bevat, kunnen we deze sanitiseren door alle HTML-tags te verwijderen om te voorkomen dat er scripts worden uitgevoerd.
+
+Indien de data niet geldig is, of om een andere reden het request niet kan worden verwerkt, is het belangrijk om een passende foutmelding terug te sturen. Door dit te doen kunnen we de front-end informeren over wat er mis is gegaan, zodat deze de gebruiker kan informeren of de nodige acties kan ondernemen.
+```typescript
+app.post('/api/tasks', (req, res) => {
+    const newTask = req.body;
+    // Validatie
+    if (typeof newTask.todo !== 'string' || typeof newTask.completed !== 'boolean') {
+        return res.status(400).json({ error: 'Ongeldige taakgegevens' });
+    }
+    tasks.push(newTask);
+    return res.status(201).json(newTask);
+});
+```
+In dit voorbeeld valideren we de binnenkomende taakgegevens voordat we deze toevoegen aan onze takenlijst. Als de gegevens niet geldig zijn, sturen we een `400 Bad Request` statuscode terug met een foutmelding.
+
+:::info
+In synchrone code zal express automatisch fouten afhandelen die worden gegooid in route handlers of middleware. Echter, als er iets misgaat in asynchrone functies (zoals bij het gebruik van Promises of async/await), zal express deze fout niet automatisch opvangen. Als er een fout optreedt die niet wordt afgehandeld, kan dit leiden tot geen response naar de client. 
+Om dit te voorkomen, is het belangrijk om fouten in asynchrone code expliciet af te handelen, bijvoorbeeld door gebruik te maken van try/catch blokken of door de fout door te geven aan de volgende middleware met `next(err)`.
+```typescript
+app.get('/api/tasks/:id', async (req, res, next) => {
+    try {
+        const task = await getTaskById(req.params.id);
+        if (!task) {
+            return res.status(404).json({ error: 'Taak niet gevonden' });
+        }
+        res.json(task);
+    } catch (err) {
+        next(err); // Fout doorgeven aan de foutafhandelingsmiddleware
+    }
+});
+```
+:::
+
+Deze error handling en validatie zorgt wel dat onze back-end veiliger wordt, maar het toont niet automatisch iets aan de gebruiker. We moeten er in de front-end ook voor zorgen dat we deze foutmeldingen opvangen en tonen aan de gebruiker, zodat deze weet wat er mis is gegaan en eventueel actie kan ondernemen.
+
+**Kort samengevat**: Validatie en error handling gebeuren zowel op front-end als back-end.
+- Op de front-end maken we gebruik van formulieren met validatie, knoppen die geactiveerd of gedeactiveerd worden op basis van de geldigheid van de data, en het tonen van foutmeldingen aan de gebruiker. De prmaire use-case hiervoor is de user experience verbeteren.
+- Op de back-end valideren we alle binnenkomende data en sanitiseren we deze om beveiligingsrisico's te minimaliseren. We sturen passende foutmeldingen en HTTP-statuscodes terug naar de front-end wanneer iets misgaat. De primaire use-case hiervoor is de veiligheid en integriteit van de applicatie waarborgen.
+
+## 8. NestJS
+NestJS is een back-end framework voor Node.js dat gebouwd is met TypeScript en sterk geïnspireerd is op Angular. Het wordt meestal gecombineerd met Express.js. Het biedt een gestructureerde, schaalbare en onderhoudbare manier om server-side applicaties te bouwen.
+Net zoals Angular werkt NestJS met modules, controllers, services en dependency injection. Het is opinionated, wat betekent dat het een vaste manier van werken voorschrijft. Dat past niet altijd bij iedereen, maar het kan wel zeer productief zijn.
+
+NestJS sluit naadloos aan bij de concepten die we kennen uit Angular. Het heeft een duidelijke structuur en, net zoals met Express.js, kunnen we er REST-API’s mee bouwen. Daarnaast ondersteunt het verschillende integraties, zoals databases (MongoDB, PostgreSQL, …), authenticatie (JWT, OAuth, …) en WebSockets.
+
+### Installatie
+Om NestJS te gebruiken moeten we eerst de NestJS CLI installeren via npm:
+```bash
+npm install -g @nestjs/cli
+```
+Vervolgens kunnen we een nieuw NestJS project aanmaken met de CLI:
+```bash
+nest new my-nestjs-app
+```
+Dit zal eerst vragen welk package manager we willen gebruiken (npm of yarn). Kies hier voor npm als we de standaard package manager willen gebruiken.
+Hierna zal je te zien krijgen dat de installatie wordt uitgevoerd
+```bash
+Installation in progress... ☕
+```
+Soms kan dit een paar minuten duren, afhankelijk van je internetverbinding en de snelheid van je computer.
+
+De installatie is klaar wanneer je het volgende ziet:
+```bash
+🚀  Successfully created project my-nestjs-app
+👉  Get started with the following commands:
+
+$ cd my-nestjs-app
+$ npm run start
+
+                                         
+                          Thanks for installing Nest 🙏
+                 Please consider donating to our open collective
+                        to help us maintain this package.
+                                         
+                                         
+               🍷  Donate: https://opencollective.com/nest
+```
+
+Dit zal een nieuwe map `my-nestjs-app` aanmaken met een basisstructuur voor een NestJS applicatie. We kunnen dan de benodigde dependencies installeren en de server starten:
+```bash
+cd my-nestjs-app
+npm install
+npm run start:dev
+```
+De server zal nu draaien op `http://localhost:3000`. We kunnen dit testen door deze URL in onze browser te openen. We zouden een welkomstbericht van NestJS moeten zien.
+We moeten dit niet op poort 3000 draaien, je kunt dit aanpassen in het `main.ts` bestand:
+```typescript
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  //highlight-next-line
+  await app.listen(process.env.PORT ?? 3001);
+}
+bootstrap();
+```
+Hiermee zal de server luisteren op poort 3001. Je kan dit ook aanpassen door een environment variable in te stellen, maar voor nu is dit voldoende.
+
+Om de server te stoppen, kunnen we in de terminal waar de server draait `Ctrl + C` indrukken.
+### Basisstructuur
+Een nieuw NestJS project heeft een basisstructuur die lijkt op de volgende:
+```
+src/
+├── app.controller.spec.ts
+├── app.controller.ts
+├── app.module.ts
+├── app.service.ts
+├── main.ts
+└── products
+    ├── products.controller.spec.ts
+    ├── products.controller.ts
+    ├── products.module.ts
+    ├── products.service.spec.ts
+    └── products.service.ts
+```
+- `main.ts`: Dit is het entry point van de applicatie. Hier wordt de NestJS applicatie gecreëerd en gestart.
+- `app.module.ts`: Dit is de root module van de applicatie. Modules zijn een manier om gerelateerde functionaliteit te groeperen.
+- `app.controller.ts`: Controllers zijn verantwoordelijk voor het afhandelen van inkomende HTTP-requests en het terugsturen van responses.
+- `app.service.ts`: Services bevatten de business logica van de applicatie en worden vaak gebruikt door controllers om data te verwerken.
+- `products/`: Dit is een voorbeeld van een feature module die gerelateerde functionaliteit voor producten bevat, inclusief een controller en een service.
+### Modules
+NestJS maakt gebruik van modules om de applicatie op te delen in logische domeinen. Elke module kan controllers, services en andere providers bevatten die gerelateerd zijn aan een specifiek onderdeel van de applicatie.
+Elke app start met een root module, meestal `AppModule` genoemd. We kunnen extra modules aanmaken om verschillende functionaliteiten te organiseren. Bijvoorbeeld, we kunnen een `TasksModule` maken voor het beheren van taken:
+```bash
+nest generate module tasks
+```
+Dit zal een nieuwe map `tasks` aanmaken met een `tasks.module.ts` bestand erin en de module registreren in de `app.module.ts`:
+```typescript
+// src/app.module.ts
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+//highlight-next-line
+import { TasksModule } from './tasks/tasks.module';
+
+@Module({
+  //highlight-next-line
+  imports: [TasksModule],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+De `TasksModule` ziet er als volgt uit:
+```typescript
+import { Module } from '@nestjs/common';
+
+@Module({})
+export class TasksModule {}
+```
+Op dit moment is de module nog leeg. We kunnen nu controllers en services toevoegen aan deze module om de functionaliteit voor taken te implementeren.
+
+In `AppModule` importeren we de `TasksModule`, zodat deze beschikbaar is in de applicatie. Best practice is om in `AppModule` alleen modules te importeren, en geen controllers of services direct te registreren. 
+
+### Controllers
+Controllers in NestJS zijn verantwoordelijk voor het afhandelen van inkomende HTTP-requests en het terugsturen van responses. We kunnen een controller aanmaken voor onze `TasksModule` om taken te beheren:
+```bash
+nest generate controller tasks
+```
+Dit zal een nieuw bestand `tasks.controller.ts` aanmaken in de `tasks` map:
+```typescript
+// src/tasks/tasks.controller.ts
+import { Controller } from '@nestjs/common';
+
+@Controller('tasks')
+export class TasksController {}
+```
+De `@Controller('tasks')` decorator geeft aan dat deze controller verantwoordelijk is voor routes die beginnen met `/tasks`. Daarnaast wordt ook automatisch de controller geregistreerd in de `TasksModule`:
+```typescript
+// src/tasks/tasks.module.ts
+import { Module } from '@nestjs/common';
+import { TasksController } from './tasks.controller';
+
+@Module({
+  controllers: [TasksController],
+})
+export class TasksModule {}
+```
+We kunnen nu methoden toevoegen aan de controller om verschillende HTTP-requests af te handelen, zoals GET en POST:
+```typescript
+// src/tasks/tasks.controller.ts
+import { Controller, Get } from '@nestjs/common';
+
+@Controller('tasks')
+export class TasksController {
+  @Get()
+  getAllTasks() {
+    return {
+      tasks: [{ id: 1, title: 'Task One', description: 'This is task one' }],
+    };
+  }
+}
+```
+In dit voorbeeld hebben we een `getAllTasks` methode toegevoegd die een lijst van taken terugstuurt wanneer er een GET-request wordt gedaan naar `/tasks`.
+We maken gebruik van een statische lijst van taken voor dit voorbeeld. We zullen later zien hoe we dit kunnen uitbreiden met een service en een database.
+We kunnen nu naar [http://localhost:3000/tasks](http://localhost:3000/tasks) gaan in onze browser om de lijst van taken te zien.
+
+Om de HTTP-methoden te definiëren, gebruiken we decorators zoals `@Get()`, `@Post()`, `@Put()`, en `@Delete()`. Deze decorators geven aan welke HTTP-methode een bepaalde controller-methode afhandelt.
+**Decorators**
+In de controller gebruiken we verschillende decorators om routes en parameters te definiëren:
+- `@Controller('tasks')`: Definieert een controller voor de `/tasks` route
+- `@Get()`: Definieert een methode die een GET-request afhandelt
+- `@Post()`: Definieert een methode die een POST-request afhandelt
+- `@Param('id')`: Haalt een route-parameter op uit de URL (bv. `/tasks/:id`)
+- `@Param()`: Haalt alle route-parameters op als een object
+- `@Body()`: Haalt de body van een POST- of PUT-request op
+- `@Query('search')`: Haalt een query-parameter op uit de URL (bv. `/tasks?search=term`)
+
+### Services
+Services in NestJS bevatten de business logica van de applicatie en worden vaak gebruikt door controllers om data te verwerken. We kunnen een service aanmaken voor onze `TasksModule` om de logica voor taken te beheren:
+```bash
+nest generate service tasks
+```
+Dit zal een nieuw bestand `tasks.service.ts` aanmaken in de `tasks` map:
+```typescript
+import { Injectable } from '@nestjs/common';
+
+@Injectable()
+export class TasksService {}
+```
+De `@Injectable()` decorator geeft aan dat deze klasse een provider is die kan worden geïnjecteerd in andere klassen, zoals controllers.
+Daarnaast wordt ook automatisch de service geregistreerd in de `TasksModule`:
+```typescript
+import { Module } from '@nestjs/common';
+import { TasksController } from './tasks.controller';
+//highlight-next-line
+import { TasksService } from './tasks.service';
+
+@Module({
+  controllers: [TasksController],
+  //highlight-next-line
+  providers: [TasksService],
+})
+export class TasksModule {}
+```
+Om nu de service te gebruiken gaan we eerst een interface definiëren voor onze taak:
+```typescript
+// src/tasks/task.interface.ts
+export interface Task {
+    id: number;
+    title: string;
+    description: string;
+}
+```
+Hiervoor wordt geen stricte structuur opgelegd in NestJS. Sommigen gebruiken een bestand met `.interfaces.ts`, anderen maken in elke module een `interfaces`map aan. Je kunt zelf bepalen wat voor jou het beste werkt, zolang je maar consistent bent binnen je project.
+
+We kunnen nu methoden toevoegen aan de service om taken te beheren:
+```typescript
+// src/tasks/tasks.service.ts
+import { Injectable } from '@nestjs/common';
+import { Task } from './task.interface';
+@Injectable()
+export class TasksService {
+    private tasks: Task[] = [
+        { id: 1, title: 'Task One', description: 'This is task one' },
+        { id: 2, title: 'Task Two', description: 'This is task two' },
+    ];
+    getAllTasks(): Task[] {
+        return this.tasks;
+    }
+    getTaskById(id: number): Task | undefined {
+        return this.tasks.find(task => task.id === id);
+    }
+}
+```
+Voorlopig gebruiken we een statische lijst van taken en enkel de methoden om taken op te halen. We zullen dit later uitbreiden met methoden om taken te maken, bij te werken en te verwijderen.
+
+We kunnen nu de service injecteren in de controller en gebruiken om taken op te halen:
+```typescript
+// src/tasks/tasks.controller.ts
+import { Controller, Get, Param } from '@nestjs/common';
+import { TasksService } from './tasks.service';
+import { Task } from './task.interface';
+
+@Controller('tasks')
+export class TasksController {
+    constructor(private readonly tasksService: TasksService) {}
+
+    @Get()
+    getAllTasks(): Task[] {
+        return this.tasksService.getAllTasks();
+    }
+
+    @Get(':id')
+    getTaskById(@Param('id') id: string) {
+        return this.tasksService.getTaskById(Number(id));
+    }
+}
+```
+In dit voorbeeld hebben we de `TasksService` geïnjecteerd in de `TasksController` via de constructor. We gebruiken vervolgens de service om alle taken op te halen in de `getAllTasks` methode en een specifieke taak op te halen in de `getTaskById` methode.
+
+Als we nu naar [http://localhost:3000/tasks](http://localhost:3000/tasks) gaan in onze browser, zullen we de lijst van taken zien die wordt opgehaald via de service. We kunnen ook een specifieke taak opvragen door naar [http://localhost:3000/tasks/1](http://localhost:3000/tasks/1) te gaan, waarbij `1` de ID is van de taak die we willen ophalen.
+
+
+:::warning
+In de voorbeelden gaan we ervan uit dat je de server op poort 3000 draait. Als je een andere poort hebt ingesteld, zorg er dan voor dat je de juiste poort gebruikt in de URL.
+:::
+
+### POST-request
+We kunnen nu al taken opvragen via GET-requests, maar we willen ook taken kunnen aanmaken. Hiervoor voegen we eerst een methode toe aan de service om een nieuwe taak toe te voegen:
+```typescript
+// src/tasks/tasks.service.ts
+createTask(title: string, description: string): Task {
+    const newTask: Task = {
+        id: this.tasks.length + 1,
+        title,
+        description,
+    };
+    this.tasks.push(newTask);
+    return newTask;
+}
+```
+:::info
+Merk op hoe we de ID toekennen aan de nieuwe taak. We geven de gebruiker niet de mogelijkheid om zelf een ID te kiezen maar we genereren deze automatisch op basis van het aantal taken dat we al hebben. In een echte applicatie met een database zou de database dit voor ons doen.
+:::
+
+Vervolgens voegen we een POST-route toe aan de controller om nieuwe taken te maken:
+```typescript
+// src/tasks/tasks.controller.ts
+//highlight-next-line
+import { Controller, Get, Post, Param, Body } from '@nestjs/common';
+import { TasksService } from './tasks.service';
+
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+  @Get()
+  getAllTasks() {
+    return this.tasksService.getAllTasks();
+  }
+
+  @Get(':id')
+  getTaskById(@Param('id') id: string) {
+    return this.tasksService.getTaskById(Number(id));
+  }
+  //highlight-start
+  @Post()
+  createTask(@Body() body: { title: string; description: string }) {
+    return this.tasksService.createTask(body.title, body.description);
+  }
+    //highlight-end
+}
+```
+Nu kan je een POST-request sturen naar `/tasks` met een JSON-body die de titel en beschrijving van de nieuwe taak bevat. De controller zal deze data doorgeven aan de service om de taak aan te maken. Dit kunnen we testen met de tools die we eerder hebben besproken, zoals Postman of curl.
+
+Nadat je het Post-request hebt gestuurd, kan je een GET-request doen naar `/tasks` om te zien dat de nieuwe taak is toegevoegd aan de lijst.
+
+### PUT-request
+We kunnen nu al taken aanmaken, en opvragen, maar we willen ook taken kunnen bijwerken.
+Hiervoor voegen we eerst een methode toe aan de service om een taak bij te
+```typescript
+// src/tasks/tasks.service.ts
+updateTask(id: number, title: string, description: string): Task | undefined {
+    const task = this.getTaskById(id);
+    if (task) {
+        task.title = title;
+        task.description = description;
+    }
+    return task;
+}
+```
+Vervolgens voegen we een PUT-route toe aan de controller om taken bij te werken:
+```typescript
+// src/tasks/tasks.controller.ts
+//highlight-next-line
+import { Controller, Get, Post, Put, Param, Body } from '@nestjs/common';
+import { TasksService } from './tasks.service';
+
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+  @Get()
+  getAllTasks() {
+    return this.tasksService.getAllTasks();
+  }
+
+  @Get(':id')
+  getTaskById(@Param('id') id: string) {
+    return this.tasksService.getTaskById(Number(id));
+  }
+
+  @Post()
+  createTask(@Body() body: { title: string; description: string }) {
+    const newTask = this.tasksService.createTask(body.title, body.description);
+    return newTask;
+  }
+  //highlight-start
+  @Put(':id')
+  updateTask(
+    @Param('id') id: string,
+    @Body() body: { title: string; description: string },
+  ) {
+    const updatedTask = this.tasksService.updateTask(
+      Number(id),
+      body.title,
+      body.description,
+    );
+    return updatedTask;
+  }
+    //highlight-end
+}
+```
+We kunnen nu een PUT-request sturen naar `/tasks/:id` met een JSON-body die de nieuwe titel en beschrijving van de taak bevat. De controller zal deze data doorgeven aan de service om de taak bij te werken. Dit kunnen we testen met de tools die we eerder hebben besproken, zoals Postman of curl.
+Wat er achterliggend gebeurt is dat de service de taak opzoekt op basis van de ID, en vervolgens de titel en beschrijving bijwerkt met de nieuwe waarden uit de request body.
+Nadat je het PUT-request hebt gestuurd, kan je een GET-request doen naar `/tasks/:id` om te zien dat de taak is bijgewerkt.
+
+### DELETE-request
+Tot slot willen we ook taken kunnen verwijderen. Hiervoor voegen we eerst een methode toe aan de service om een taak te verwijderen:
+```typescript
+// src/tasks/tasks.service.ts
+deleteTask(id: number): boolean {
+    const index = this.tasks.findIndex(task => task.id === id);
+    if (index !== -1) {
+        this.tasks.splice(index, 1);
+        return true;
+    }
+    return false;
+}
+```
+Vervolgens voegen we een DELETE-route toe aan de controller om taken te verwijderen:
+```typescript
+// src/tasks/tasks.controller.ts
+//highlight-next-line
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+import { TasksService } from './tasks.service';
+
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+  @Get()
+  getAllTasks() {
+    return this.tasksService.getAllTasks();
+  }
+
+  @Get(':id')
+  getTaskById(@Param('id') id: string) {
+    return this.tasksService.getTaskById(Number(id));
+  }
+
+  @Post()
+  createTask(@Body() body: { title: string; description: string }) {
+    const newTask = this.tasksService.createTask(body.title, body.description);
+    return newTask;
+  }
+
+  @Put(':id')
+  updateTask(
+    @Param('id') id: string,
+    @Body() body: { title: string; description: string },
+  ) {
+    const updatedTask = this.tasksService.updateTask(
+      Number(id),
+      body.title,
+      body.description,
+    );
+    return updatedTask;
+  }
+  //highlight-start
+  @Delete(':id')
+  deleteTask(@Param('id') id: string) {
+    const result = this.tasksService.deleteTask(Number(id));
+    return { success: result };
+  }
+    //highlight-end
+}
+```
+We kunnen nu een DELETE-request sturen naar `/tasks/:id` om een taak te verwijderen. De controller zal deze request doorgeven aan de service om de taak te verwijderen. Dit kunnen we testen met de tools die we eerder hebben besproken, zoals Postman of curl. Je kan nadien een GET-request doen naar `/tasks` om te zien dat de taak is verwijderd.
+
+### DTO's
+We hebben in de voorbeelden hierboven gebruik gemaakt van types voor de request bodies, zoals:
+```typescript
+@Body() body: { title: string; description: string }
+```
+Dit werkt prima, en zorgt voor goede type-checking. Echter werkt dit enkel in compile-time. In run-time is er geen validatie van de data die binnenkomt. Om dit op te lossen kunnen we gebruik maken van DTO's (Data Transfer Objects). DTO's zijn een soort contracten die worden afgesproken tussen de front-end en de back-end over de structuur van de data die wordt uitgewisseld. 
+
+Als we bijvoorbeeld terugkijken naar de analogie van het restaurant, dan is een DTO vergelijkbaar met de manier waarop we onze bestelling doorgeven aan de ober. We geven duidelijk aan wat we willen bestellen, door de naam van het gerecht, eventuele aanpassingen en de hoeveelheid. We gaan niet om een pizza te bestellen meegeven dat we met de auto komen, of dat we een hond hebben. We geven enkel de relevante informatie door die nodig is om onze bestelling correct te verwerken. 
+
+Ook het omgekeerde geldt: Wanneer de ober onze maaltijd terugbrengt, verwachten we dat onze maaltijd op een bord wordt geserveerd, met bestek en een servet. We verwachten niet dat de ober ons een boodschappenlijstje geeft van alle ingrediënten die in onze maaltijd zijn gebruikt. We vertrouwen erop dat de ober onze bestelling correct heeft doorgegeven aan de keuken en dat we krijgen wat we hebben besteld.
+
+In NestJS kunnen we DTO's definiëren als TypeScript-klassen. De reden dat dit klassen zijn en geen interfaces, is omdat ze in run-time ook gebruikt moeten kunnen worden. Daarnaast moet het ook extra functionaliteit kunnen bevatten, zoals validatie.
+
+We kunnen bijvoorbeeld een DTO definiëren voor het aanmaken van een nieuwe taak:
+```typescript
+// src/tasks/dto/create-task.dto.ts
+export class CreateTaskDto {
+    title: string;
+    description: string;
+}
+```
+Dit op zichzelf is nog niet voldoende om validatie te doen. We kunnen hiervoor de `class-validator` en `class-transformer` packages gebruiken. Deze kunnen we installeren via npm:
+```bash
+npm install class-validator class-transformer
+```
+Vervolgens kunnen we de DTO uitbreiden met validatie decorators:
+```typescript
+// src/tasks/dto/create-task.dto.ts
+import { IsString, IsNotEmpty } from 'class-validator';
+export class CreateTaskDto {
+    @IsString()
+    @IsNotEmpty()
+    title: string;
+
+    @IsString()
+    @IsNotEmpty()
+    description: string;
+}
+```
+Nu hebben we enkele regels toegevoegd om de waarden te valideren:
+- `@IsString()`: Zorgt ervoor dat de waarde een string is.
+- `@IsNotEmpty()`: Zorgt ervoor dat de waarde niet leeg is.
+
+
+We kunnen ook sanitisatie toevoegen, bijvoorbeeld om ervoor te zorgen dat spaties aan het begin en einde van de string worden verwijderd:
+```typescript
+import { IsNotEmpty, IsString } from 'class-validator';
+//highlight-next-line
+import { Transform } from 'class-transformer';
+
+export class CreateTaskDto {
+  @IsString()
+  //highlight-next-line
+  @Transform(({ value }) => value.trim())
+
+  @IsNotEmpty()
+  readonly title: string;
+
+  @IsString()
+  //highlight-next-line
+  @Transform(({ value }) => value.trim())
+  @IsNotEmpty()
+  readonly description: string;
+}
+```
+Zo worden ook eventuele onnodige spaties verwijderd, voordat de validatie wordt uitgevoerd.
+Om deze validatie te activeren, moeten we een globale validatie pipe toevoegen in `main.ts`:
+```typescript
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+//highlight-next-line
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  //highlight-next-line
+  app.useGlobalPipes(new ValidationPipe());
+  await app.listen(process.env.PORT ?? 4000);
+}
+bootstrap();
+```
+Nu kunnen we de DTO gebruiken in onze controller:
+```typescript
+// src/tasks/tasks.controller.ts
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+import { TasksService } from './tasks.service';
+//highlight-next-line
+import { CreateTaskDto } from './dto/create-task.dto';
+
+@Controller('tasks')
+export class TasksController {
+    constructor(private tasksService: TasksService) {}
+
+      @Post()
+        createTask(@Body() data: CreateTaskDto) {
+            const newTask = this.tasksService.createTask(data.title, data.description);
+            return newTask;
+        }
+}
+```
+Nu zal NestJS automatisch de binnenkomende data valideren op basis van de regels die we hebben gedefinieerd in de `CreateTaskDto`. Als de data niet geldig is, zal NestJS een `400 Bad Request` response terugsturen met details over de validatiefouten.
+
+We willen ook een DTO maken voor het terugsturen van taken. Dit is niet strikt noodzakelijk, maar het kan handig zijn om een duidelijk contract te hebben over welke data we terugsturen naar de client. We kunnen bijvoorbeeld een `TaskDto` maken:
+```typescript
+// src/tasks/dto/task.dto.ts
+
+import { Expose, Exclude} from 'class-transformer';
+@Exclude()
+export class TaskDto {
+    @Expose()
+    readonly id: number;
+
+    @Expose()
+    readonly title: string;
+    
+    @Expose()
+    readonly description: string;
+}
+
+```
+We gebruiken hier de `@Exclude()` decorator om ervoor te zorgen dat standaard alle velden worden uitgesloten van de serialisatie. Vervolgens gebruiken we de `@Expose()` decorator om expliciet aan te geven welke velden we willen opnemen in de response.
+:::info
+Soms bevat een entity of model meer velden dan we willen terugsturen naar de client. Bijvoorbeeld een `User` entity kan een `password`veld bevatten. In dat geval willen we niet dat dit veld wordt teruggestuurd in de response. 
+We kunnen dit oplossen door gebruik te maken van de `@Exclude()`decorator op het veld dat we willen uitsluiten.
+```typescript
+import { Exclude, Expose } from 'class-transformer';
+export class UserDto {
+    @Expose()
+    readonly id: number;
+
+    @Expose()
+    readonly username: string;
+
+    @Exclude()
+    readonly password: string;
+}
+```
+Dit zorgt ervoor dat het `password` veld niet wordt opgenomen in de response wanneer we een `UserDto` instantie serialiseren. Het is een goede praktijk om echter altijd expliciet te definiëren welke velden we wel willen terugsturen, in plaats van welke we niet willen terugsturen. Dit doen we door gebruik te maken van de `@Exclude()` decorator op de klasse zelf, en vervolgens alleen de velden die we willen terugsturen te markeren met de `@Expose()` decorator. Dit zet standaard alle velden uit, en voorkomt dat we per ongeluk gevoelige informatie terugsturen.
+```typescript
+import { Exclude, Expose } from 'class-transformer';
+@Exclude()
+export class UserDto {
+    @Expose()
+    readonly id: number;
+
+    @Expose()
+    readonly username: string;
+
+}
+```
+:::
+
+Nu kunnen we deze DTO gebruiken in onze controller om de response te formatteren:
+```typescript
+// src/tasks/tasks.controller.ts
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+import { TasksService } from './tasks.service';
+import { CreateTaskDto } from './dto/create-task.dto';
+//highlight-start
+import { TaskDto } from './dto/task.dto';
+import { plainToInstance } from 'class-transformer';
+//highlight-end
+
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+  @Post()
+  createTask(@Body() data: CreateTaskDto) {
+    const newTask = this.tasksService.createTask(data.title, data.description);
+    //highlight-next-line
+    return plainToInstance(TaskDto, newTask);
+  }
+}
+```
+We maken gebruik van de `plainToInstance` functie van `class-transformer` om het plain JavaScript object om te zetten naar een instantie van de `TaskDto` klasse. Dit zorgt ervoor dat de response voldoet aan het contract dat we hebben gedefinieerd in de DTO.
+We kunnen dit ook toepassen op de andere methoden in de controller:
+```typescript
+// src/tasks/dto/task.update.dto.ts
+import { IsNotEmpty, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+
+export class CreateTaskDto {
+  @IsString()
+  @Transform(({ value }) => value.trim())
+  @IsNotEmpty()
+  readonly title: string;
+
+  @IsString()
+  @Transform(({ value }) => value.trim())
+  @IsNotEmpty()
+  readonly description: string;
+}
+```
+```typescript
+// src/tasks/tasks.controller.ts
+import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+//highlight-next-line
+import { plainToInstance } from 'class-transformer';
+import { TasksService } from './tasks.service';
+import { CreateTaskDto } from './dto/create-task.dto';
+//highlight-next-line
+import { UpdateTaskDto } from './dto/update-task.dto';
+import { TaskDto } from './dto/task.dto';
+
+
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+  @Get()
+  getAllTasks() {
+    //highlight-start
+    const tasks = this.tasksService.getAllTasks();
+    return tasks.map((task) => plainToInstance(TaskDto, task));
+    //highlight-end
+  }
+
+  @Get(':id')
+  getTaskById(@Param('id') id: string) {
+    //highlight-start
+    const task = this.tasksService.getTaskById(Number(id));
+    return plainToInstance(TaskDto, task);
+    //highlight-end
+  }
+
+  @Post()
+  createTask(@Body() data: CreateTaskDto) {
+    const newTask = this.tasksService.createTask(data.title, data.description);
+    return plainToInstance(TaskDto, newTask);
+  }
+
+  @Put(':id')
+  updateTask(
+    @Param('id') id: string,
+    //highlight-next-line
+    @Body() data : UpdateTaskDto,
+  ) {
+    //highlight-start
+    const updatedTask = this.tasksService.updateTask(
+      Number(id),
+      data.title,
+      data.description,
+    );
+    return plainToInstance(TaskDto, updatedTask);
+    //highlight-end
+  }
+
+  @Delete(':id')
+  deleteTask(@Param('id') id: string) {
+    const result = this.tasksService.deleteTask(Number(id));
+    return { success: result };
+  }
+}
+```
+**Wat gebeurt er nu concreet wanneer we een request sturen naar de back-end?**
+1. Het request komt binnen in de controller.
+2. De controller zet de binnenkomende body om naar een instantie van de DTO-klasse (bijvoorbeeld `CreateTaskDto`).
+3. De validation pipe valideert de DTO op basis van de regels die we hebben gedefinieerd.
+4. De validation pipe laat de controller weten of de data geldig is of niet. Als de data niet geldig is, geeft de pipe een foutmelding terug en zal de controller een `400 Bad Request` response sturen. Als de data geldig is, gaat het verder naar de volgende stap.
+5. De service verwerkt de data en voert de nodige acties uit (zoals het aanmaken van een nieuwe taak).
+6. De service stuurt het resultaat terug naar de controller.
+7. De controller zet het resultaat om naar een response DTO (bijvoorbeeld `TaskDto`). 
+8. De controller stuurt de response DTO terug naar de client als JSON-response.
+```mermaid
+---
+config:
+  theme: mc
+---
+sequenceDiagram
+    autonumber
+    participant C as Client
+    participant CTRL as Controller
+    participant PIPE as Validation Pipe
+    participant S as Service
+
+    C->>CTRL: HTTP request (body)
+    CTRL->>CTRL: Body omzetten naar CreateTaskDto
+    CTRL->>PIPE: Valideer DTO
+    PIPE-->>CTRL: OK of fout (throw bij invalid)
+
+    CTRL->>S: Geldige data doorgeven
+    S-->>CTRL: Resultaat (nieuwe taak)
+
+    CTRL->>CTRL: Omzetten naar TaskDto (response DTO)
+    CTRL-->>C: HTTP response (TaskDto)
+```
+
+### main.ts
+In `main.ts` vindt de globale setup van de NestJS applicatie plaats, op basis van de root module (`AppModule`). Hier kunnen we globale middleware, pipes, filters en andere instellingen configureren die van toepassing zijn op de hele applicatie.
+
+#### CORS
+Een belangrijk aspect van back-end ontwikkeling is het omgaan met CORS (Cross-Origin Resource Sharing). CORS is een beveiligingsmechanisme dat bepaalt of een webpagina bronnen van een andere domein mag laden. Standaard blokkeren browsers cross-origin requests om beveiligingsredenen.
+In `main.ts` kunnen we CORS inschakelen om ervoor te zorgen dat enkel onze front-end applicatie requests kan sturen naar onze back-end, zelfs als ze op verschillende domeinen draaien:
+```typescript
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  //highlight-start
+  app.enableCors({
+    origin: ['http://localhost:4200']; // het domein van de front-end applicatie
+  })
+  //highlight-end
+  app.useGlobalPipes(new ValidationPipe());
+  await app.listen(process.env.PORT ?? 3000);
+}
+bootstrap();
+```
+Hiermee staat onze back-end alleen requests toe van `http://localhost:4200`, wat het standaard domein is voor Angular applicaties die lokaal draaien. In een productieomgeving zouden we dit aanpassen naar het domein waar onze front-end applicatie gehost wordt. In een productieomgeving zou de origin bijvoorbeeld `https://www.mijnapplicatie.com` kunnen zijn. 
+
+#### global prefix
+We kunnen ook een globale prefix instellen voor alle routes in onze applicatie. Dit is handig om een versiebeheer toe te passen op onze API, bijvoorbeeld door alle routes te prefixen met `/api/v1`:
+```typescript
+// src/main.ts
+import { NestFactory } from '@nestjs/core';
+import { AppModule } from './app.module';
+import { ValidationPipe } from '@nestjs/common';
+
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
+  app.enableCors({
+    origin: ['http://localhost:4200']
+  })
+  //highlight-next-line
+  app.setGlobalPrefix('api/v1')
+  app.useGlobalPipes(new ValidationPipe());
+  await app.listen(process.env.PORT ?? 3000);
+}
+bootstrap();
+```
+Met deze instelling zullen alle routes in onze applicatie nu beginnen met `/api/v1`. Bijvoorbeeld, de route voor het ophalen van alle taken zal nu `/api/v1/tasks` zijn in plaats van gewoon `/tasks`. Dit helpt bij het organiseren van de API en maakt het eenvoudiger om verschillende versies van de API te beheren in de toekomst.
+
+## 9. MongoDB
+MongoDB is een NoSQL-database die document-geörienteerd is. In plaats van tabellen en rijen zoals in relationele databases, slaat MongoDB data op in flexibele JSON-achtige documenten. Dit maakt het zeer geschikt voor toepassingen waarbij de data-structuur kan variëren of snel kan evolueren. Het is zeer populair bij Node.js, NestJS en andere JavaScript-gebaseerde back-end frameworks vanwege de flexibiliteit en schaalbaarheid. Het is gebouwd voor performance en schaalbaarheid.
+
+### SQL vs NoSQL
+Voordat we verder ingaan op MongoDB, is het belangrijk om het verschil te begrijpen tussen relationele databases (SQL) en NoSQL-databases.
+Relationele databases, zoals MySQ L, PostgreSQL en SQLite, slaan data op in tabellen met rijen en kolommen. Ze gebruiken SQL (Structured Query Language) voor het beheren en opvragen van data. Relationele databases zijn zeer geschikt voor toepassingen waarbij de data-structuur goed gedefinieerd is en relaties tussen verschillende data-entiteiten belangrijk zijn.
+
+NoSQL (Not Only SQL) databases, zoals MongoDB, Cassandra en Redis, slaan data op in verschillende formaten, zoals documenten, key-value paren, grafen of kolom-georiënteerde opslag. Ze zijn ontworpen voor flexibiliteit en schaalbaarheid, en kunnen beter omgaan met grote hoeveelheden ongestructureerde of semi-gestructureerde data.
+Je kan het beste [deze vergelijking](https://www.mongodb.com/nosql-explained/nosql-vs-sql) raadplegen voor een diepgaandere uitleg over de verschillen tussen SQL en NoSQL databases.
+
+### Wanneer MongoDB gebruiken?
+
+**Wanneer wel:**  
+- Als de data flexibel of evoluerend is en schema-aanpassingen nodig zijn.  
+- Voor toepassingen die veel met JSON werken (REST/GraphQL).  
+- Bij ongestructureerde of semi-gestructureerde data zoals logs, sensor data of gebruikerscontent.  
+- Als horizontale schaalbaarheid over meerdere servers belangrijk is.  
+- Voor snelle ontwikkeling en prototyping.  
+
+**Wanneer niet:**  
+- Voor complexe multi-step transacties die ACID-ondersteuning vereisen.  
+- Als strikte dataconsistentie noodzakelijk is.  
+- Bij sterk verbonden data met veel relaties, waar joins en foreign keys nodig zijn.
+
+### Installatie
+Om MongoDB te gebruiken, moeten we eerst de MongoDB server installeren. Dit kan op verschillende manieren, afhankelijk van je besturingssysteem. De eenvoudigste manier is om MongoDB via Docker te draaien. Dit vereist dat je Docker op je machine hebt geïnstalleerd. Mocht je nog geen of minimale ervaring met docker hebben, is het aan te raden om de bare-metal  installatie te volgen.
+
+<Tabs>
+    <TabItem value="docker" label="Docker">
+    Je vindt de installatie-instructies op de [Officiële MongoDB website](https://www.mongodb.com/docs/manual/administration/install-community/?operating-system=docker&search-docker=with-search-docker).
+    Als je de standaard installatie volgt, draait MongoDB op poort `27017`. Deze heeft standaard geen volumes of authenticatie ingesteld, wat prima is voor lokale ontwikkeling, maar hou hier rekening mee. Dit wilt ook zeggen dat alle data verloren gaat wanneer je de container uitzet of verwijdert.
+    Om de mongoDB toch persistent te maken, kan je het `run`-commando uitbreiden met een volume:
+    ```bash
+    docker run -d -p 27017:27017 --name mongodb -v mongodb:/data/DB
+    ```
+    Dit zorgt ervoor dat de data wordt opgeslagen in een Docker volume genaamd `mongodb`, waardoor de data behouden blijft, zelfs als de container wordt verwijderd.
+    </TabItem>
+    <TabItem value="bare-metal" label="Bare-metal">
+    Je vindt de installatie-instructies voor de server op de [officiële MongoDB website](https://www.mongodb.com/docs/manual/administration/install-community/).
+    Volg de stappen en kies bij voorkeur de standaardinstellingen, tenzij je specifieke redenen hebt om hiervan af te wijken.
+    Zorg dat `mongod` draait op je machine. Dit is de MongoDB server die op de achtergrond draait en verbindingen accepteert. Je kiest best voor de standaard poort `27017`, tenzij je een specifieke reden hebt om een andere poort te gebruiken.
+    </TabItem>
+</Tabs>
+We installeren daarnaast MongoDB Compass, een grafische interface om met MongoDB databases te werken. Dit maakt het eenvoudiger om data te bekijken en te beheren zonder command-line tools te hoeven gebruiken. Je kan de installatie-instructies voor MongoDB Compass vinden op de [officiële MongoDB Compass website](https://www.mongodb.com/docs/compass/install/).
+De verbinding met de database is onafhankelijk van de installatie-methode. In beide gevallen is de standaard verbindingsstring:
+```
+mongodb://localhost:27017
+```
+We kunnen nu de MongoDB server starten (indien nog niet gebeurd) en verbinding maken via MongoDB Compass om te controleren of alles correct werkt.
+
+### concepten
+Voordat we verder gaan met het gebruik van MongoDB, is het belangrijk om enkele basisconcepten te begrijpen:
+
+| Begrip       | Uitleg                                                                                                      |
+|--------------|------------------------------------------------------------------------------------------------------------|
+| Database     | Een container voor gegevens. In MongoDB kunnen meerdere databases op dezelfde server bestaan. Elke database kan verschillende collecties bevatten. |
+| Collectie    | Vergelijkbaar met een tabel in relationele databases. Een groep van gerelateerde documenten. Wordt automatisch aangemaakt bij het eerste document. |
+| Document     | Een enkel record in een collectie. Wordt opgeslagen in BSON (Binary JSON). Documenten kunnen verschillende velden en datatypes bevatten en hoeven niet allemaal dezelfde structuur te hebben. |
+| Field        | Een sleutel-waarde paar binnen een document. Elk veld heeft een naam (sleutel) en een waarde, die verschillende datatypes kan hebben zoals string, nummer, boolean, array of genest document. |
+| ObjectId     | Uniek identificatienummer voor elk document. Wordt automatisch gegenereerd bij aanmaak en bevat o.a. een timestamp en unieke waarde. |
+
+### Mongo Shell
+MongoDB wordt geleverd met een command-line interface genaamd `mongo shell`. Hiermee kunnen we direct verbinding maken met de MongoDB server en database-operaties uitvoeren via de command-line. Dit is handig voor snelle tests en beheer van de database.
+Om de mongo shell te openen, kunnen we het volgende commando gebruiken in de terminal:
+<Tabs>
+    <TabItem value="docker" label="Docker">
+    ```bash
+    docker exec -it mongodb mongosh
+    ```
+    </TabItem>
+    <TabItem value="bare-metal" label="Bare-metal">
+    ```bash
+    mongosh 
+    ```
+    Als je geen extra configuratie hebt gedaan, zal dit automatisch verbinding maken met de MongoDB server op `localhost:27017`.
+    </TabItem>
+</Tabs>
+Eenmaal in de mongo shell kunnen we verschillende commando's uitvoeren om databases en collecties te beheren. Hier zijn enkele basiscommando's:
+| Commando                                                | Beschrijving                                                                         |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
+| `show dbs`                                              | Toont alle databases op de server.                                                   |
+| `use <database>`                                        | Schakelt over naar de opgegeven database (maakt deze aan als deze nog niet bestaat). |
+| `db`                                                    | Toont de huidige database.                                                           |
+| `db.createCollection('<collection>')`                   | Maakt een nieuwe collectie aan in de huidige database.                               |
+| `db.<collection>.insertOne({ ... })`                    | Voegt een nieuw document toe aan de opgegeven collectie.                             |
+| `db.<collection>.updateOne({ ... }, { $set: { ... } })` | Werkt een document bij in de opgegeven collectie.                                    |
+| `db.<collection>.deleteOne({ ... })`                    | Verwijdert een document uit de opgegeven collectie.                                  |
+| `db.<collection>.drop()`                                | Verwijdert de opgegeven collectie.                                                   |
+| `db.<collection>.countDocuments()`                      | Telt het aantal documenten in de opgegeven collectie.                                |
+
+#### Zoeken (`find`)
+| Commando                                                    | Beschrijving                                                                                            |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `db.<collection>.find()`                                    | Haalt alle documenten op uit de opgegeven collectie.                                                    |
+| `db.<collection>.find().pretty()`                           | Haalt alle documenten op en formatteert de output voor betere leesbaarheid.                             |
+| `db.<collection>.find({ <veld>: <waarde> })`                | Haalt documenten op die voldoen aan de opgegeven filter.                                                |
+| `db.<collection>.find({ <veld>: { $regex: /<pattern>/ } })` | Haalt documenten op waarbij het veld voldoet aan het opgegeven reguliere expressiepatroon.              |
+| `db.<collection>.find().sort({ <field>: 1 })`               | Haalt documenten op en sorteert ze oplopend op het opgegeven veld. Gebruik `-1` voor aflopend sorteren. |
+| `db.<collection>.find().limit(<number>)`                    | Haalt een beperkt aantal documenten op uit de collectie.                                                |
+
+
+Je kan de volgende commando's testen:
+
+```mongodb
+show dbs
+use tasks
+db.createCollection('tasks')
+db.tasks.insertOne({ title: 'Task One', description: 'This is task one'})
+db.tasks.find()
+db.tasks.updateOne({ title: 'Task One' }, { $set: { description: 'Updated description' } })
+db.tasks.deleteOne({ title: 'Task One' })
+db.tasks.find()
+```

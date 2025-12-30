@@ -5,6 +5,9 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
+  markdown: {
+    mermaid: true,
+  },
   title: 'The Codingverse Docs',
   tagline: 'let the code set you free',
   favicon: 'img/favicon.ico',
@@ -34,7 +37,7 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-
+  themes: ['@docusaurus/theme-mermaid'],
   presets: [
     [
       'classic',

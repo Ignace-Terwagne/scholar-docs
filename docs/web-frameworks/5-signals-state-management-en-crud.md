@@ -116,21 +116,20 @@ Om dit in ons voorbeeld van de teller toe te passen, kunnen we de `increment` fu
 ```typescript
 // src/app/counter/counter.ts
 import { signal } from '@angular/core';
-const count = signal(0);
 
 export class Counter {
-    teller = signal();
+    count = signal(0);
 
     increment() {
-        this.teller.update(value => value + 1);
+        this.count.update(value => value + 1);
     }
 }
 ```
-In dit geval verhoogt `increment()` de waarde van `teller` met 1 telkens wanneer het wordt aangeroepen. Wanneer we deze methode koppelen aan een knop in de UI, zal de teller automatisch worden bijgewerkt dankzij het signal-mechanisme.
+In dit geval verhoogt `increment()` de waarde van `count` met 1 telkens wanneer het wordt aangeroepen. Wanneer we deze methode koppelen aan een knop in de UI, zal de teller automatisch worden bijgewerkt dankzij het signal-mechanisme.
 ```html
 <!-- src/app/counter/counter.html -->
 <button (click)="increment()">Increment</button>
-<p>Count: {{ teller() }}</p>
+<p>Count: {{ count() }}</p>
 ```
 
 ### `Computed()` signals
@@ -150,15 +149,15 @@ Hier is een voorbeeld van hoe je `computed()` kunt gebruiken in een component:
 import { Component, signal, computed } from '@angular/core';
 
 export class Teller {
-    teller = signal(0);
-    doubleTeller = computed(() => this.teller() * 2);
+    count = signal(0);
+    doubleCount = computed(() => this.count() * 2);
     
     increment() {
-        this.teller.update(value => value + 1);
+        this.count.update(value => value + 1);
     }
 }
 ```
-In dit voorbeeld hebben we een `doubleTeller` computed signal dat altijd de dubbele waarde van `teller` bevat. Wanneer `teller` verandert, wordt `doubleTeller` automatisch bijgewerkt.
+In dit voorbeeld hebben we een `doubleCount` computed signal dat altijd de dubbele waarde van `count` bevat. Wanneer `count` verandert, wordt `doubleCount` automatisch bijgewerkt.
 
 De functie binnen `computed()` wordt pas uitgevoerd wanneer de waarde voor het eerst gelezen wordt. Angular cachet deze waarde, zodat volgende reads snel zijn en de berekening niet opnieuw hoeft te gebeuren. Als een van de afhankelijke signals verandert, markeert Angular de cache als “invalid” en herberekent de waarde bij de volgende read. Hierdoor kun je veilig zwaardere berekeningen uitvoeren, zoals filters of totals.
 

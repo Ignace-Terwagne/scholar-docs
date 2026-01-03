@@ -473,6 +473,7 @@ export interface Task {
     id: number;
     title: string;
     description: string;
+    completed: boolean;
 }
 ```
 Hiervoor wordt geen stricte structuur opgelegd in NestJS. Sommigen gebruiken een bestand met `.interfaces.ts`, anderen maken in elke module een `interfaces`map aan. Je kunt zelf bepalen wat voor jou het beste werkt, zolang je maar consistent bent binnen je project.
@@ -485,8 +486,8 @@ import { Task } from './task.interface';
 @Injectable()
 export class TasksService {
     private tasks: Task[] = [
-        { id: 1, title: 'Task One', description: 'This is task one' },
-        { id: 2, title: 'Task Two', description: 'This is task two' },
+        { id: 1, title: 'Task One', description: 'This is task one' , completed: false},
+        { id: 2, title: 'Task Two', description: 'This is task two' , completed: true},
     ];
     getAllTasks(): Task[] {
         return this.tasks;
@@ -538,13 +539,14 @@ createTask(title: string, description: string): Task {
         id: this.tasks.length + 1,
         title,
         description,
+        completed: false,
     };
     this.tasks.push(newTask);
     return newTask;
 }
 ```
 :::info
-Merk op hoe we de ID toekennen aan de nieuwe taak. We geven de gebruiker niet de mogelijkheid om zelf een ID te kiezen maar we genereren deze automatisch op basis van het aantal taken dat we al hebben. In een echte applicatie met een database zou de database dit voor ons doen.
+Merk op hoe we de ID toekennen aan de nieuwe taak. We geven de gebruiker niet de mogelijkheid om zelf een ID te kiezen maar we genereren deze automatisch op basis van het aantal taken dat we al hebben. In een echte applicatie met een database zou de database dit voor ons doen. Ook de waarde voor `completed` wordt standaard op `false` gezet bij het aanmaken van een nieuwe taak.
 :::
 
 Vervolgens voegen we een POST-route toe aan de controller om nieuwe taken te maken:
@@ -583,11 +585,12 @@ We kunnen nu al taken aanmaken, en opvragen, maar we willen ook taken kunnen bij
 Hiervoor voegen we eerst een methode toe aan de service om een taak bij te
 ```typescript
 // src/tasks/tasks.service.ts
-updateTask(id: number, title: string, description: string): Task | undefined {
+updateTask(id: number, title: string, description: string , completed: false): Task | undefined {
     const task = this.getTaskById(id);
     if (task) {
         task.title = title;
         task.description = description;
+        task.completed = false;
     }
     return task;
 }
@@ -621,12 +624,13 @@ export class TasksController {
   @Put(':id')
   updateTask(
     @Param('id') id: string,
-    @Body() body: { title: string; description: string },
+    @Body() body: { title: string; description: string, completed: boolean },
   ) {
     const updatedTask = this.tasksService.updateTask(
       Number(id),
       body.title,
       body.description,
+      body.completed,
     );
     return updatedTask;
   }
@@ -679,12 +683,13 @@ export class TasksController {
   @Put(':id')
   updateTask(
     @Param('id') id: string,
-    @Body() body: { title: string; description: string },
+    @Body() body: { title: string; description: string, completed: boolean },
   ) {
     const updatedTask = this.tasksService.updateTask(
       Number(id),
       body.title,
       body.description,
+      body.completed,
     );
     return updatedTask;
   }
@@ -817,6 +822,9 @@ export class TaskDto {
     
     @Expose()
     readonly description: string;
+
+    @Expose()
+    readonly completed: boolean;
 }
 
 ```
@@ -877,11 +885,11 @@ export class TasksController {
 We maken gebruik van de `plainToInstance` functie van `class-transformer` om het plain JavaScript object om te zetten naar een instantie van de `TaskDto` klasse. Dit zorgt ervoor dat de response voldoet aan het contract dat we hebben gedefinieerd in de DTO.
 We kunnen dit ook toepassen op de andere methoden in de controller:
 ```typescript
-// src/tasks/dto/task.update.dto.ts
-import { IsNotEmpty, IsString } from 'class-validator';
+// src/tasks/dto/update-task.dto.ts
+import { IsBoolean, IsNotEmpty, IsString } from 'class-validator';
 import { Transform } from 'class-transformer';
 
-export class CreateTaskDto {
+export class UpdateTaskDto {
   @IsString()
   @Transform(({ value }) => value.trim())
   @IsNotEmpty()
@@ -891,6 +899,9 @@ export class CreateTaskDto {
   @Transform(({ value }) => value.trim())
   @IsNotEmpty()
   readonly description: string;
+
+  @IsBoolean()
+  readonly completed: boolean;
 }
 ```
 ```typescript
@@ -941,6 +952,7 @@ export class TasksController {
       Number(id),
       data.title,
       data.description,
+      data.completed,
     );
     return plainToInstance(TaskDto, updatedTask);
     //highlight-end
@@ -1208,3 +1220,533 @@ Bij het gebruik van references moeten we vaak meerdere queries uitvoeren om de g
 
 ### BSON
 BSON (Binary JSON) is het opslagformaat dat MongoDB gebruikt om documenten op te slaan. het is een binaire representatie van JSON-achtige documenten. BSON ondersteunt meer datatypes dan JSON, zoals `Date`, `Decimal128` en `Binary`, wat het geschikter maakt voor opslag in een database.
+
+### indexatie
+Indexes worden gebruikt om snel te kunnen zoeken in grote datasets. Je kunt dit beschouwen als een inhoudsopgave in een boek, waarmee je snel naar de juiste pagina kunt springen zonder het hele boek te hoeven doorzoeken.
+Automatisch maakt MongoDB een index aan op het `_id` veld van elke collectie, wat zorgt voor snelle zoekopdrachten op basis van de unieke identificator van documenten. Daarnaast kun je handmatig extra indexes aanmaken op andere velden om zoekprestaties te verbeteren.
+```mongodb
+db.tasks.createIndex({ title: 1}) // 1 voor oplopend, -1 voor aflopend
+```
+Wat gebeurt er nu achter de schermen wanneer we een index maken? MongoDB bouwt een datastructuur die de waarden van het opgegeven veld (in dit geval `title`) koppelt aan de locaties van de bijbehorende documenten in de collectie. Hierdoor, wanneer we een query uitvoeren met `find({ title: 'Task One' })`, gaat MongoDB niet door alle documenten in de collectie, maar gebruikt het de index om snel de locaties van de documenten met die titel te vinden. Hierdoor is het aanzienlijk sneller. 
+
+Het is echter niet verstandig om op elk veld een index te maken, omdat dit extra opslagruimte vereist. Je kan het zien als elke keer dat er een document wordt toegevoegd of bijgewerkt, de index ook moet worden bijgewerkt. Dit kan de prestaties van schrijfoperaties beïnvloeden. Daarom is het belangrijk om alleen indexes te maken op velden die vaak worden gebruikt in zoekopdrachten.
+
+### Mongoose
+We kunnen de Mongo Shell commando's niet rechtstreeks gebruiken in onze NestJS applicatie. Hiervoor hebben we een ODM (Object Document Mapper) library nodig. Dit is een library die ons toestaat om de datastructuren van mongoDB te definiëren als objecten in onze code, en deze objecten te gebruiken. 
+De populairste ODM voor Node.js en NestJS is Mongoose. Mongoose biedt een schema-gebaseeerde oplossing om onze data-modellen te definiëren.
+
+:::info 
+We hebben eerder gezien dat MongoDB een flexibel schema heeft, en dus geen vaste structuur vereist voor documenten. Echter gaan we door Mongoose toch schema's definiëren. Dit is belangrijk, omdat we anders in de code niet weten welke velden we kunnen verwachten in de documenten. Het gebruik van deze schema's is ook niet noodzakelijk een beperking: in grotere toepassingen is het vaak wenselijk om een zekere mate van structuur en validatie te hebben op de data die we opslaan. Daarnaast kunnen we via Mongoose wel nog in zekere mate flexibele data oplsaan, zoals optionele velden of geneste documenten.
+:::
+We installeren Mongoose via npm:
+```bash
+npm install mongoose @nestjs/mongoose
+```
+Vervolgens kunnen we Mongoose integreren in onze NestJS applicatie. We beginnen met het importeren van de `MongooseModule`in onze `AppModule`:
+```typescript
+// src/app.module.ts
+import { Module } from '@nestjs/common';
+import { AppController } from './app.controller';
+import { AppService } from './app.service';
+import { TasksModule } from './tasks/tasks.module';
+import { MongooseModule } from '@nestjs/mongoose';
+
+@Module({
+  imports: [
+    TasksModule,
+    MongooseModule.forRoot('mongodb://localhost:27017/todo-db'),
+  ],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+WE gebruiken hierin de `forRoot`methode van Mongoose. Hier geven we de database-string door om verbinding te maken met de MongoDB server. 
+:::info
+We gebruiken als database-string hier: 
+```
+mongodb://localhost:27017/todo-db
+```
+Wat betekent dit nu juist? 
+- `mongodb://` geeft aan welke soort database we gebruiken, in dit geval MongoDB. 
+- `localhost:27017`. Het kan ook zijn dat dit op een andere hostnaam of IP-adres staat, bijvoorbeeld als de database op een andere server draait. De `27017` is de poort waarop de MongoDB server luistert. Standaard is dit `27017`, maar dit kan aangepast worden in de MongoDB configuratie. 
+- `todo-db` is de naam van de database waarmee we verbinding maken. Als deze database nog niet bestaat, zal MongoDB deze automatisch aanmaken wanneer we de eerste keer data opslaan.
+
+We maken hier uitzonderlijk verbinding zonder authenticatie. In een productieomgeving is het echter sterk aangeraden om authenticatie in te schakelen en een gebruiker aan te maken met de juiste rechten voor de database. Dan zou de database-string er bijvoorbeeld zo uitzien:
+```
+mongodb://username:password@localhost:27017/todo-db
+```
+:::
+
+We moeten nu starten met het definiëren van een schema voor onze taken. Voor de eenvoudigheid werken we voorlopig met één enkel schema. We maken een nieuwe map `schemas` aan in de `tasks`module:
+```typescript
+// src/tasks/schemas/task.schema.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+
+@Schema()
+export class Task {
+    @Prop({ required: true})
+    title: string;
+
+    @Prop({ required: true})
+    description: string;
+
+    @Prop({ default: false})
+    completed: boolean;
+}
+
+export const TaskSchema = SchemaFactory.createForClass(Task);
+```
+Hier zien we veel nieuwe concepten, dus laten we het even stap voor stap overlopen:
+
+Om te beginnen importeren we enkele decorators en types van `@nestjs/mongoose` en `mongoose`. De belangrijkste zijn:
+- `@Schema()`: Deze decorator markeert de klasse als een Mongoose schema.
+- `@Prop()`: Deze decorator markeert een eigenschap van de klasse als een veld in het schema.
+- `SchemaFactory`: Dit is een helper om een Mongoose schema te maken op basis van de klasse.
+
+
+```typescript
+@Schema()
+export class Task {
+    @Prop({ required: true})
+    title: string;
+
+    @Prop({ required: true})
+    description: string;
+
+    @Prop({ default: false})
+    completed: boolean;
+}
+```
+Dit is de eigenlijke schema-definitie. Hier zeggen we programmatisch tegen Mongodb hoe een taak eruitziet in de database:
+- We definiëren een klasse `Task` en markeren deze met de `@Schema()` decorator.
+- We definiëren drie eigenschappen: `title`, `description` en `completed`, en markeren deze met de `@Prop()` decorator.
+- We geven extra opties door aan de `@Prop()` decorator, zoals `required: true` om aan te geven dat deze velden verplicht zijn, en `default: false` om een standaardwaarde in te stellen voor het `completed` veld.
+- Daarnaast geven we de types van de eigenschappen op (string voor `title` en `description`, boolean voor `completed`).
+
+```typescript
+export const TaskSchema = SchemaFactory.createForClass(Task);
+```
+Tot slot gebruiken we de `SchemaFactory` om een Mongoose schema te maken op basis van de `Task` klasse. Dit schema kunnen we vervolgens gebruiken om een Mongoose model te maken dat we in onze service kunnen gebruiken om met de database te communiceren.
+We moeten nu het schema registreren in de `TasksModule`, zodat we het kunnen gebruiken in de service:
+```typescript
+// src/tasks/tasks.module.ts
+import { Module } from '@nestjs/common';
+import { TasksController } from './tasks.controller';
+import { TasksService } from './tasks.service';
+//highlight-start
+import { MongooseModule } from '@nestjs/mongoose';
+import { Task, TaskSchema } from 'src/tasks/schemas/task.schema';
+//highlight-end
+@Module({
+    //highlight-start
+  imports: [
+    MongooseModule.forFeature([{ name: Task.name, schema: TaskSchema }]),
+  ],
+  //highlight-end
+  controllers: [TasksController],
+  providers: [TasksService],
+})
+export class TasksModule {}
+```
+We gebruiken de `MongooseModule.forFeature` methode om het `Task` schema te registreren. We geven een array van objecten door, waarbij elk object de naam van het model en het bijbehorende schema bevat. Dit maakt het mogelijk om het `Task` model te injecteren in onze service.
+
+Als we nu nestjs al een keer starten, zal het automatisch de `todo-db` database aanmaken in MongoDB (indien deze nog niet bestaat). Daarnaast zal het ook een `tasks` collectie aanmaken op basis van het `Task` schema dat we hebben gedefinieerd.
+
+:::info
+Hoe weet Mongoose nu welke naam het moet gebruiken voor de collectie in de database? Standaard gebruikt Mongoose de meervoudsvorm van de modelnaam in kleine letters. In ons geval is de modelnaam `Task`, dus zal Mongoose automatisch de collectie `tasks`aanmaken. Dit kan je aanpassen door een derde parameter door te geven aan de `@Schema()` decorator, bijvoorbeeld:
+```typescript
+@Schema({ collection: 'my_custom_tasks' })
+```
+Voorlopig is dit voor onze toepassing niet nodig, maar het is goed om te weten dat deze optie bestaat.
+:::
+
+#### Create
+Nu kunnen we het `Task` model gebruiken in onze `TasksService` om CRUD-operaties uit te voeren op de taken in de MongoDB database. We starten hierbij met Create.
+```typescript
+import { Injectable } from '@nestjs/common';
+//highlight-start
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Task } from './schemas/task.schema';
+//highlight-end
+@Injectable()
+export class TasksService {
+//highligh-next-line
+constructor(@InjectModel(Task.name) private taskModel: Model<Task>) {}
+  
+  createTask(title: string, description: string): Promise<Task> {
+    //highlight-start
+    const newTask = new this.taskModel({
+      title: title,
+      description: description,
+    });
+    return newTask.save();
+    //highlight-end
+  }
+}
+```
+Merk op dat we hier enkele nieuwe concepten zien:
+- We hebben onze oorspronkelijke interface van `Task`vervangen door het `Task`model dat we hebben gedefinieerd met Mongoose. Aangezien dat dit een klasse is, kunnen we dit ook gebruiken als type in onze service.
+- We injecteren het `Task` model in de constructor van de service met behulp van de `@InjectModel()` decorator. Dit maakt het mogelijk om het model te gebruiken om met de database te communiceren.
+- In de `createTask` methode maken we eeen nieuwe taak aan door een nieuwe instantie van het `taskModel` te maken en de `title` en `description` door te geven. We moeten `completed` niet doorgeven, omdat deze standaard op `false` staat.
+- Wanneer we `newTask.save()` dan aanroepen, gaat Mongoose de inhoud van de instantie overlopen en een nieuw document aanmaken in de `tasks`collectie van de `todo-db` database in MongoDB.
+
+De parameters van de `createTask` methode blijven hetzelfde, dus hoeven we in de controller niet aan te passen, maar merk op: we sturen nu een `Promise<Task>` terug in plaats van `Task`. Dit komt omdat Mongoose asynchroon werkt en we moeten wachten tot de database-operatie is voltooid voordat we het resultaat kunnen teruggeven.
+We moeten de controller dus ook aanpassen om hiermee om te gaan:
+```typescript
+// src/tasks/tasks.controller.ts
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+
+  @Post()
+  //highlight-start
+  async createTask(@Body() data: CreateTaskDto) {
+    const newTask = await this.tasksService.createTask(
+      data.title,
+      data.description,
+    );
+    return plainToInstance(TaskDto, newTask);
+  }
+  //highlight-end
+}
+```
+
+We kunnen nu een POST-request sturen naar de `/tasks` endpoint om een nieuwe taak aan te maken. We sturen de volgende JSON-body mee:
+```json
+{
+    "title": "Nieuwe taak",
+    "description": "Beschrijving van de nieuwe taak"
+}
+```
+Als je de dto's hebt geïmplementeerd zoals eerder beschreven, zal je een response terugkrijgen die er zo uitziet:
+```json
+{
+    "title": "Nieuwe taak",
+    "description": "Beschrijving van de nieuwe taak",
+    "completed": false
+}
+```
+Waarom zien we het `_id` veld niet terug? We hebbben in de dto eerder gedefinieerd dat we het`id` veld willen gebruiken, maar niet het `_id` veld. Wanneer we een term proberen te gebruiken die niet bestaat in de DTO, wordt deze automatisch weggelaten in de response. We kunnen dit oplossen door het `id`veld te vervangen door `_id` in de `TaskDto`:
+```typescript
+// src/tasks/dto/task.dto.ts
+import { Exclude, Expose } from 'class-transformer';
+
+@Exclude()
+export class TaskDto {
+  @Expose()
+  //highlight-next-line
+  readonly _id: number;
+
+  @Expose()
+  readonly title: string;
+
+  @Expose()
+  readonly description: string;
+
+  @Expose()
+  readonly completed: boolean;
+}
+```
+Als je nu opnieuw een POST-request stuurt, zal de response er zo uitzien:
+```json
+{
+    "_id": "64b8f0c2e1b2c3d4e5f67890",
+    "title": "Nieuwe taak",
+    "description": "Beschrijving van de nieuwe taak",
+    "completed": false
+}
+```
+
+We kijken nu in de database om te zien of de taak correct is opgeslagen.
+```mongosh
+todo-db> db.tasks.find()
+[
+  {
+    _id: ObjectId('6957c761b6baaf0c16cc4c38'),
+    title: 'Nieuwe taak',
+    description: 'Beschrijving van de nieuwe taak',
+    completed: false,
+    __v: 0
+  },
+  {
+    _id: ObjectId('6957c793cd555e9308adbcfa'),
+    title: 'Nieuwe taak',
+    description: 'Beschrijving van de nieuwe taak',
+    completed: false,
+    __v: 0
+  }
+]
+```
+We zien hier inderdaad de twee taken terugkomen die we hebben aangemaakt via de API. Mongoose heeft automatisch het `_id` veld toegevoegd als unieke identificator voor elk document. Daarnaast heeft Mongoose ook een `__v` veld toegevoegd, wat de versie van het document bijhoudt. Dit is handig voor interne doeleinden, zoals bij het uitvoeren van updates.
+
+#### Read
+We kunnen nu de `getAllTasks`en `getTaskById` methoden implementeren in de service om taken op te halen uit de database:
+```typescript
+// src/tasks/tasks.service.ts
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Task } from './schemas/task.schema';
+@Injectable()
+export class TasksService {
+  constructor(@InjectModel(Task.name) private taskModel: Model<Task>) {}
+
+  createTask(title: string, description: string): Promise<Task> {
+    const newTask = new this.taskModel({
+      title: title,
+      description: description,
+    });
+    return newTask.save();
+  }
+//highlight-start
+  getAllTasks(): Promise<Task[]> {
+    const tasks = this.taskModel.find().exec();
+    return tasks;
+  }
+
+  getTaskById(id: string): Promise<Task | null> {
+    const task = this.taskModel.findById(id).exec();
+    return task;
+  }
+//highlight-end
+}
+```
+We maken gebruik van de Mongoose methoden `find()` en `findById()`om respecievelijk alle taken op te halen en een taak op basis van het `_id` veld. Beide methoden retourneren een query-object. We zouden hier nog extra queries kunnen toevoegen, zoals filters, sortering of paginatie. Om de query daadwerkelijk uit te voeren en de resultaten op te halen, roepen we de `exec()` methode aan. Dit retourneert een Promise die we kunnen awaiten of teruggeven.
+
+In de controller passen we terug de methoden aan om de resultaten asynchroon op te halen:
+```typescript
+// src/tasks/tasks.controller.ts
+
+@Controller('tasks')
+export class TasksController {
+  constructor(private tasksService: TasksService) {}
+
+  @Post()
+  async createTask(@Body() data: CreateTaskDto) {
+    const newTask = await this.tasksService.createTask(
+      data.title,
+      data.description,
+    );
+    return plainToInstance(TaskDto, newTask);
+  }
+
+  @Get()
+  //highlight-start
+  async getAllTasks() {
+    const tasks = this.tasksService.getAllTasks();
+    return tasks.then((taskList) =>
+      taskList.map((task) => plainToInstance(TaskDto, task)),
+    );
+  }
+  //highlight-end
+
+  @Get(':id')
+  //highlight-start
+  async getTaskById(@Param('id') id: string) {
+    const task = await this.tasksService.getTaskById(id);
+    return plainToInstance(TaskDto, task);
+  }
+//highlight-end
+}
+```
+:::Info
+Merk hier op dat de id van datatype is veranderd. We gebruiken hier `string` in plaats van `number`. Dit komt omdat het `_id` veld in MongoDB een `ObjectId` is, wat een 24-karakter hexadecimale string is. Daarom moeten we de id als string behandelen in onze code.
+:::
+Nu we dit hebben geïmplementeerd, kunnen we een GET-request sturen naar het `/tasks` endpoint om alle taken op te halen, en naar het `/tasks/:id` endpoint om een specifieke taak op te halen op basis van het `_id` veld.
+
+#### Update
+We kunnen nu de `UpdateTask` methode implementeren in de service om een taak bij te werken in de database. Zo kunnen we bijvoorbeeld de taak als voltooid markeren:
+```typescript
+// src/tasks/tasks.service.ts
+import { Injectable } from '@nestjs/common';
+import { InjectModel } from '@nestjs/mongoose';
+import { Model } from 'mongoose';
+import { Task } from './schemas/task.schema';
+@Injectable()
+export class TasksService {
+  constructor(@InjectModel(Task.name) private taskModel: Model<Task>) {}
+
+  createTask(title: string, description: string): Promise<Task> {
+    const newTask = new this.taskModel({
+      title: title,
+      description: description,
+    });
+    return newTask.save();
+  }
+
+  getAllTasks(): Promise<Task[]> {
+    const tasks = this.taskModel.find().exec();
+    return tasks;
+  }
+
+  getTaskById(id: string): Promise<Task | null> {
+    const task = this.taskModel.findById(id).exec();
+    return task;
+  }
+
+  //highlight-start
+  updateTask(id: string, updatedData: Partial<Task>): Promise<Task | null> {
+    return this.taskModel
+      .findByIdAndUpdate(id, updatedData, { new: true })
+      .exec();
+  }
+  //highlight-end
+}
+```
+We zien hier een nieuw concept: `Partial<T>`
+
+Dit is een Typescript utility type dat een nieuw type maakt waarbij alle eigenschappen van het oorspronkelijke type optioneel zijn. In ons geval betekent dit dat we een object kunnen doorgeven met slechts enkele velden van het `Task` type, en niet alle velden verplicht hoeven te specificeren. Stel dat we dit type manueel zouden definiëren, dan zou het er zo uitzien:
+```typescript
+type PartialTask = {
+  title?: string;
+  description?: string;
+  completed?: boolean;
+}
+```
+Dit is handig voor update-operaties, omdat we vaak slechts enkele velden willen bijwerken zonder de hele taak te hoeven overschrijven.
+
+Mongoose biedt de `findByIdAndUpdate` methode om een document bij te werken op basis van het `_id` veld. We geven de id, de bijgewerkte data en een optie `{ new: true }` door om aan te geven dat we het bijgewerkte document willen terugkrijgen in plaats van het originele document. We roepen opnieuw `exec()` aan om de query uit te voeren en een Promise terug te krijgen.
+
+In de controller passen we de `updateTask` methode aan om de update-operatie asynchroon uit te voeren:
+```typescript
+// src/tasks/tasks.controller.ts
+  @Put(':id')
+  async updateTask(
+    @Param('id') id: string,
+    @Body() data: UpdateTaskDto,
+  ) {
+    const updatedTask = await this.tasksService.updateTask(id, data);
+    return plainToInstance(TaskDto, updatedTask);
+    }
+```
+:::info 
+Merk op dat we in de `updateTask`methode in de service gebruik hebben gemaakt van `Partial<Task>`, terwijl we in de controller een `UpdateTaskDto` gebruiken. We geven dus in dit geval alle wijzigbare velden door via de DTO. Dit is omdat we gebruik maken van een `PUT` endpoint. Een `PUT`request verwacht dat we het volledige object doorgeven, ook al zijn sommige velden ongewijzigd. 
+
+Waarom gebruiken we dan `Partial<Task>` in de service? Dit is omdat we in de service niet willen afdwingen dat alle velden aanwezig zijn. Zo kunnen we de service ook hergebruiken voor andere doeleinden, zoals enkel het aanduiden dat een taak voltooid is, zonder de andere velden te hoeven doorgeven.
+
+Stel dat we toch enkel de velden willen doorgeven die gewijzigd zijn, dan zouden we beter een `PATCH` endpoint gebruiken in plaats van `PUT`. In dat geval zou de controller er zo uitzien:
+```typescript
+  @Patch(':id')
+  async patchTask(
+    @Param('id') id: string,
+    @Body() data: Partial<UpdateTaskDto>,
+  ) {
+    const updatedTask = await this.tasksService.updateTask(id, data);
+    return plainToInstance(TaskDto, updatedTask);
+    }
+```
+Maar dit valt buiten het bestek van deze cursus.
+:::
+
+#### Delete
+Tot slot kunnen we de `deleteTask` methode implementeren in de service om een taak te verwijderen uit de database:
+```typescript
+// src/tasks/tasks.service.ts
+    deleteTask(id: string): Promise<Task | null> {
+    return this.taskModel.findByIdAndDelete(id).exec();
+    }
+```
+We gebruiken de Mongoose methode `findByIdAndDelete` om een document te verwijderen op basis van het `_id` veld. We roepen opnieuw `exec()` aan om de query uit te voeren en een Promise terug te krijgen. In de controller passen we de `deleteTask` methode aan om de delete-operatie asynchroon uit te voeren:
+```typescript
+// src/tasks/tasks.controller.ts
+  @Delete(':id')
+  async deleteTask(@Param('id') id: string) {
+    const deletedTask = await this.tasksService.deleteTask(id);
+    return plainToInstance(TaskDto, deletedTask);
+  }
+```
+We kunnen nu een DELETE-request sturen naar het `/tasks/:id` endpoint om een taak te verwijderen op basis van het `_id` veld.
+
+Je hebt nu een volledige CRUD-functionaliteit geïmplementeerd in je NestJS applicatie met MongoDB als database. Je kan nu via de REST API taken aanmaken, ophalen, bijwerken en verwijderen in de MongoDB database. Je kan nu je front-end hieraan koppelen om een volledige to-do applicatie te maken.
+:::info
+Het volgende onderdeel behoort niet meer tot de basiskennis van MongoDB en CRUD, maar het is wel nuttig om te weten hoe we relaties kunnen modelleren in MongoDB met Mongoose.
+:::
+#### Relaties met Mongoose
+We hebben eerder besproken hoe we relaties kunnen modelleren in MongoDB met embedded documents en references.
+Laten we nu bekijken hoe we dit kunnen implementeren met Mongoose in onze NestJS applicatie.
+##### Embedded documents met Mongoose
+We kunnen embedded documents modelleren door een sub-schema te definiëren binnen ons hoofd-schema. Laten we bijvoorbeeld een `Comment` sub-schema maken binnen het `Task` schema om opmerkingen bij een taak op te slaan:
+```typescript
+// src/tasks/schemas/comment.schema.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+@Schema()
+export class Comment {
+    @Prop({ required: true})
+    text: string;
+
+}
+export const CommentSchema = SchemaFactory.createForClass(Comment);
+```
+Vervolgens kunnen we dit sub-schema gebruiken in het `Task` schema:
+```typescript
+// src/tasks/schemas/task.schema.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Comment, CommentSchema } from './comment.schema';
+@Schema()
+export class Task {
+    @Prop({ required: true})
+    title: string;
+    @Prop({ required: true})
+    description: string;
+    @Prop({ default: false})
+    completed: boolean;
+    //highlight-start
+    @Prop({ type: [CommentSchema], default: [] })
+    comments: Comment[];
+    //highlight-end
+}
+export const TaskSchema = SchemaFactory.createForClass(Task);
+```
+We definiëren een `comments` veld in het `Task` schema als een array van `Comment` sub-documenten. We geven het type op als `[CommentSchema]` en stellen de standaardwaarde in op een lege array.
+Nu kunnen we opmerkingen toevoegen aan een taak door nieuwe `Comment` sub-documenten toe te voegen aan de `comments` array:
+```typescript
+const task = await this.taskModel.findById(taskId).exec();
+task.comments.push({ text: 'This is a comment' });
+await task.save();
+```
+##### References met Mongoose
+We kunnen references modelleren door het `_id` veld van een ander document op te slaan als een referentie. Laten we bijvoorbeeld een `User` schema maken en een referentie naar de gebruiker opslaan in het `Task` schema:
+```typescript// src/tasks/schemas/user.schema.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+@Schema()
+export class User {
+    @Prop({ required: true})
+    name: string;
+}
+export const UserSchema = SchemaFactory.createForClass(User);
+```
+Vervolgens kunnen we een referentie naar de `User` opslaan in het `Task` schema:
+```typescript
+// src/tasks/schemas/task.schema.ts
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { User } from './user.schema';
+@Schema()
+export class Task {
+    @Prop({ required: true})
+    title: string;
+    @Prop({ required: true})
+    description: string;
+    @Prop({ default: false})
+    completed: boolean;
+    //highlight-start
+    @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
+    assignedTo: User;
+    //highlight-end
+}
+export const TaskSchema = SchemaFactory.createForClass(Task);
+```
+We definiëren een `assignedTo` veld in het `Task` schema als een referentie naar het `User` schema. We geven het type op als `mongoose.Schema.Types.ObjectId` en gebruiken de `ref` optie om aan te geven naar welk schema we verwijzen.
+Nu kunnen we een gebruiker toewijzen aan een taak door het `_id` veld van de gebruiker op te slaan in het `assignedTo` veld:
+```typescript
+const user = await this.userModel.findById(userId).exec();
+const task = await this.taskModel.findById(taskId).exec();
+task.assignedTo = user._id;
+await task.save();
+```
+
+:::warning
+Wanneer je een nieuw schema aanmaakt, zoals `Comment` of `User`, vergeet dan niet om deze ook te registreren in de `TasksModule` (of een aparte module indien nodig) met `MongooseModule.forFeature`.
+:::
+

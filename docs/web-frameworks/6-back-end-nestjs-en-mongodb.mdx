@@ -1374,7 +1374,7 @@ import { Task } from './schemas/task.schema';
 //highlight-end
 @Injectable()
 export class TasksService {
-//highligh-next-line
+//highlight-next-line
 constructor(@InjectModel(Task.name) private taskModel: Model<Task>) {}
   
   createTask(title: string, description: string): Promise<Task> {

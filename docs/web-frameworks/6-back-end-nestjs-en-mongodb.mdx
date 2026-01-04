@@ -587,7 +587,7 @@ We kunnen nu al taken aanmaken, en opvragen, maar we willen ook taken kunnen bij
 Hiervoor voegen we eerst een methode toe aan de service om een taak bij te
 ```typescript
 // src/tasks/tasks.service.ts
-updateTask(id: number, title: string, description: string , completed: false): Task | undefined {
+updateTask(id: number, title: string, description: string , completed: boolean): Task | undefined {
     const task = this.getTaskById(id);
     if (task) {
         task.title = title;

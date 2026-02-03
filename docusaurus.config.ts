@@ -101,6 +101,10 @@ const config: Config = {
             {
               label: 'Python',
               to: '/docs/python/',
+            },
+            {
+                label: "ICT Architecture",
+                to: "/docs/ict-architecture/"
             }
           ],
         },

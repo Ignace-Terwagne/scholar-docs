@@ -129,7 +129,7 @@ Merk op dat de containernaam begint met `webserver`, gevolgd door een nummer (de
 
 Indien je meer dan drie nodes hebt (inclusief de manager node), zal je merken dat sommige nodes geen ccontainer hebben draaien. Het kan ook goed zijn dat de manager zelf geen containers draait. Docker Swarm verdeelt de replica's automatisch over de beschikbare nodes. Indien we geen verdere instructies geven, zal Docker Swarm proberen de replica's zo gelijkmatig mogelijk te verdelen, maar is er dus geen manier om te garanderen welke node een container zal draaien.
 
-### Test de service
+### Stap 7: Test de service
 Nu we de service hebben uitgerold, kunnen we deze testen. Verbind met de testclient machine die we eerder hebben gereserveerd. Vanaf deze machine kunnen we de webserver benaderen via het IP-adres van elke node in de swarm, gevolgd door poort 5678. Dit is mogelijk omdat we eerder de poort hebben geopend op alle nodes.
 Voer eerst op alle nodes van de cluster het volgende commando uit:
 ```bash
@@ -146,7 +146,7 @@ Wanneer je dit doet, zou je in de logs van de webserver containers op de nodes m
 
 Voer nu het curl-commando meerdere keren uit, naar hetzelfde IP-adres. Je zal merken in de logs van die specifieke node, dat het lijkt alsof niet alle requests daar aankomen. Dit komt omdat Docker Swarm een interne load balancer gebruikt om de requests te verdelen over de verschillende replica's van de service. Hierdoor wordt de belasting gelijkmatiger verdeeld en kunnen we beter omgaan met meerdere gelijktijdige requests.
 
-### Een node drainen
+### Stap 8: Een node drainen
 We hebben nu een werkende Docker Swarm Cluster met een eenvoudige service, maar soms is het nodig om een node uit de swarm te halen voor onderhoud of updates. In Docker Swarm kunnen we een node in "drain" modus zetten, wat betekent dat deze geen nieuwe services meer zal ontvangen en de bestaande services zal migreren naar andere nodes.
 Kies één van de worker nodes en voer op de manager-node het volgende commando uit om deze in drain modus te zetten:
 ```bash
@@ -161,7 +161,7 @@ Daarnaast kan je op de manager machine `docker service ps webserver` uitvoeren o
 Probeer nu opnieuw de webserver te benaderen vanaf de testclient machine met het curl-commando. Test ook de node die je hebt gedraineerd. Je zou moeten merken dat je de service nog steeds kunt bereiken, zelfs nadat je een node hebt gedraineerd. Dit is te danken aan de [Docker Swarm Routing Mesh](https://docs.docker.com/engine/swarm/ingress/), die ervoer zorgt dat alle requests naar de verschillende nodes in de swarm gerouteerd kunnen worden, ongeacht waar de service daadwerkelijk draait.
 ![alt text](image-1.png)
 
-### Updates uitvoeren
+### Stap 9: Updates uitvoeren
 We willen ook updates kunnen uitvoeren op onze nodes zonder dat de service onbeschikbaar wordt. Dit is één van de belangrijkste voordelen van het gebruik van Docker Swarm. In plaats van alle nodes tegelijk bij te werken, maken we gebruik van **rolling updates**, waarbij we één node tegelijk bijwerken, terwijl de andere nodes de service blijven draaien. De routing mesh zal er dan voor zorgen dat alle requests correct worden gestuurd naar de beschikbare nodes. Om dit te testen maken we gebruik van de image `redis:7.4.0`, die we zullen updaten naar `redis:7.4.1`.
 We maken eerst de nieuwe service aan met het volgende commando:
 ```bash
@@ -200,7 +200,7 @@ Je zal nu merken dat er telkens 10 seconden zitten tussen wanneer er `running` s
 
 Als we nu opnieuw `docker service ps redis` uitvoeren, kunnen we zien dat de replica's één voor één worden geüpdatet naar de nieuwe image. Je zou moeten zien dat er steeds één replica wordt bijgewerkt, terwijl de andere replica's nog steeds draaien en de service beschikbaar houden.
 
-### Services verwijderen
+### Stap 10: Services verwijderen
 We kunnen ook services verwijderen wanneer we deze niet meer nodig hebben. Dit kan eenvoudig worden gedaan met het volgende commando:
 ```bash
 docker service rm redis

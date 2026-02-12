@@ -5,6 +5,8 @@ sidebar_position: 2
 ---
 
 # 1. Multi-host orchestration
+In dit hoofdstuk zien we het concept van multi-host orchestration en hoe we dit kunnen implementeren met Docker Swarm. We bespreken de voordelen van multi-host orchestration, zoals verhoogde beschikbaarheid en schaalbaarheid, en we gaan dieper in op de verschillende componenten van een Docker Swarm cluster, zoals managers, workers, stacks, en secrets. We behandelen ook enkele best practices voor het opzetten en beheren van een Docker Swarm cluster, inclusief het gebruik van constraints om services te plaatsen op specifieke nodes.
+
 ### 1. Wat is multi-host orchestration?
 We hebben ondertussen al gezien dat we een webserver kunnen opzetten in een Docker-container, op een machine.
 Het nadeel hierval is dat we een single point of failure hebben: als die ene machine uitvalt, is onze webserver niet meer bereikbaar.

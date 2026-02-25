@@ -61,7 +61,7 @@ Laten we een voorbeeld nemen van een softwarepakket dat dagelijks gebruikt wordt
 Aangezien DigitAP (moodle) al in ontwikkeling is sinds 2002, kunnen we stellen dat het een brownfield project is. Ondanks dat er ondertussen al veel interessantere architecturale stijlen zijn, zoals microservices of programmeertalen waarbij PHP niet meer de beste keuze is, kunnen we niet zomaar overstappen naar een nieuwe architectuur of programmeertaal. We moeten rekening houden met de bestaande codebase, de gebruikers en de ontwikkelaars die al vertrouwd zijn met de huidige architectuur.
 
 ### 6. non-domain design considerations
-We maken ook een onderscheid tussen de functionele vereisten en de "non-domain design considerations". Om dit goed te begrijpen, moeten we eerst scherp stellen wat het doemin precies is.
+We maken ook een onderscheid tussen de functionele vereisten en de "non-domain design considerations". Om dit goed te begrijpen, moeten we eerst scherp stellen wat het domein precies is.
 
 Kort gezegd is het domein het gebied of context waarin we software ontwikkelen. Stel dat we software ontwikkelen voor een bank, dan is het domein de financiële sector. De functionele vereisten zijn de specifieke functies en features die het systeem moet hebben om aan de behoeften van de gebruikers te voldoen. De "non-domain design considerations" zijn bijvoorbeeld veiligheid, prestaties, schaalbaarheid, enz. Deze staan los van de sector waarin we werken.
 

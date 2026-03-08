@@ -22,21 +22,26 @@ We zien dit wanneer we een service schalen en bij het commando `docker service l
 
 
 ### 3. Netwerken
-In Docker Swarm kunnen we ook gebruik maken van netwerken om communicatie tussen containers mogelijk te maken. In Docker Compose hebben we gezien dat we Docker netwerken kunnen definiëren en gebruiken, en dit geldt ook voor Docker Swarm. 
+Docker containers maken gebruik van een zogenaamd docker netwerk om met elkaar te communiceren. Dit hebben we reeds gezien bij Docker Compose. Hierbij wordt er een virtuele switch gecreëerd op de host machine, waardoor de containers die op dezelfde host draaien, en in hetzelfde netwerk zitten, met elkaar kunnen communiceren zonder dat er poorten naar buiten toe hoeven te worden geopend. 
 
-Een normaal Docker netwerk maakt gebruik van een virtuele switch op de host machine, waardoor de containers die op dezelfde host draaien met elkaar kunnen communiceren. In Docker Swarm kunnen we echter ook gebruik maken van een overlay netwerk, dat een virtueel netwerk creërt dat zich uitstrekt over meerdere hosts in de swarm. Hierbij wordt er gebruik gemaakt van tunneling om communicatie tussen containers op verschillende hosts mogelijk te maken. 
+Met Docker Swarm kunnen we dit ook doen maar er komt een moeilijkheid bij kijken: wat als de container waarmee we willen communiceren zich op een andere host bevindt? In een normaal Docker netwerk kunnen containers alleen communiceren als ze zich op dezelfde host bevinden. Docker Swarm biedt hier de oplossing voor in de vorm van overlay netwerken. 
 
-Het overlay netwerk zorgt ervoor dat containers die zich op verschillende hosts bevinden toch met elkaar kunnen communiceren alsof ze zich op dezelfde host bevinden.
+Een overlay netwerk kan je beschouwen als een virtuele switch die verbonden wordt over meerdere hosts. Het is alsof je een kabel trekt tussen de hosts, waardoor de containers op verschillende hosts kunnen communiceren alsof ze zich op dezelfde host bevinden. Om dit mogelijk te maken maakt Docker Swarm gebruik van tunnel-technologie.
 
-Elke node heeft ook een speciaal netwerk genaamd het 'ingress' netwerk, dat wordt gebruikt voor het routeren van verkeer naar services die zijn geconfigureerd met een 'published port'. Zoals we in het vorige hoofdstuk hebben gezien, maakt Docker Swarm gebruik van een load balancer om inkomend verkeer naar de juiste container te routeren. Om dit mogelijk te maken, maakt Docker Swarm dus gebruik van het ingress netwerk. 
 ![alt text](image-2.png)
 
+Elke host in een swarm is ook lid van één speciaal overlay netwerk genaamd "ingress". Docker Swarm maakt namelijk gebruik van een zogenaamde routing mesh om verkeer naar services te routeren. Stel dat we een service hebben (bijvoorbeeld nginx) waarvan 3 replica's verspreid zijn over 3 verschillende hosts. We kunnen nu zorgen dat we deze service kunnen bereiken, door de poort te publiceren op elke host. Dit is gelijkaardig aan hoe we dit deden bij Docker Compose. Wanneer we nu een request sturen naar het ip-adres van één van de hosts, wordt deze niet alleen naar de container op die host gestuurd, maar kan deze ook worden doorgestuurd naar één van de andere replica's op de andere hosts. Zelfs als we geen replica van de service hebben draaien op de host waar we het request naartoe sturen, zal Docker Swarm automatisch het verkeer over het overlay netwerk routeren naar een host waar wel een replica van de service draait.
+
+![alt text](image-3.png)
+:::warning[Belangrijk]
+Het ingress netwerk wordt alleen gebruik voor het routeren van verkeer naar services die poorten hebben gepubliceerd. Dit netwerk wordt niet gebruikt voor container-to-container communicatie binnen dezelfde service. Als we bijvoorbeeld een service hebben met 3 replica's, kunnen deze replica's direct met elkaar communiceren via het overlay netwerk, zonder dat het verkeer eerst naar het ingress netwerk hoeft te worden gestuurd. Het ingress netwerk is specifiek bedoeld voor het routeren van verkeer van buiten de swarm naar de services binnen de swarm.
+:::
 ### 4. Locking
-Docker Swarm maakt gebruik van Raft (een consensus algoritme) om te zorgen dat de staat van de swarm consistent en betrouwbaar blijft. Dit algoritme genereert ook logs van alle wijzigingen die worden aangepast in de swarm, zoals het toevoegen of verwijderen van nodes, het starten of stoppen van services, enzovoort. 
+Docker Swarm bewaart de volledige staat van de swarm, inclusief alle secrets en serviceconfiguraties, in versleutelde Raft-logs op elke manager-node. Dit is ook precies de reden waarom Autolock werd geïntroduceerd: ter ondersteuning van de Docker secrets-functionaliteit.
 
-Deze logs worden standaard versleuteld opgeslagen (encrypted at rest) op de manager-nodes. Echter, zonder aanvullende configuratie wordt de bijbehorende encryptiesleutel ook onversleuteld op diezelfde schijf bewaard. Hierdoor kan de Docker-daemon bij een herstart de logs automatisch laden. Ook nieuwe nodes krijgen hun sleutel veilig via een mutual TLS (mTLS) verbinding wanneer ze zich bij de swarm voegen.
+Wanneer Docker herstart worden er twee sleutels vanuit de schijf in het geheugen geladen: de sleutel om de Raft-logs te ontsleutelen, en de TLS-sleutel voor beveiligde communicatie tussen nodes. Zonder aanvullende configuratie worden beide sleutels onversleuteld op de schijf bewaard.
 
-Het beveiligingsrisico ontstaat wanneer een aanvaller een kopie van de schijf van een manager-node maakt. Omdat de decryptiesleutel op de schijf staat, kan de aanvaller een kopie van deze node opstarten. De node zal zichzelf automatisch ontsleutelen, waardoor de aanvaller volledige controle krijgt over de swarm, inclusief toegang tot alle secrets en containers.
+Dit brengt twee concrete beveiligingsrisico's met zich mee. Ten eerste, een aanvaller die een kopie van de schijf van een manager-node maakt, kan de Raft-logs ontsleutelen en zo alle secrets en serviceconfiguraties uitlezen. Ten tweede, met de gestolen TLS-sleutel kan diezelfde aanvaller een manager-node nabootsen en zo deelnemen aan de swarm alsof hij een legitieme manager is.
 
 Om dit te voorkomen, kunnen we Autolock inschakelen. Dit voegt een extra beveiligingslaag toe door de lokale encryptiesleutels zelf weer te versleutelen met een aparte unlock key. Wanneer een manager-node herstart, zal de swarm niet automatisch actief worden. In plaats daarvan verschijnt er een foutmelding dat de swarm "locked" is. De beheerder moet dan handmatig de sleutel invoeren om de node toegang te geven tot de logs en de rest van de swarm.
 
@@ -53,10 +58,10 @@ Hierbij zal er worden gevraagd om de unlock key, die we hebben gekregen toen we 
 Locking beschermt specifiek tegen diefstal van data op de schijf (data-at-rest). Als een aanvaller echter toegang krijgt tot de actieve shell van een reeds ontgrendelde manager-node, kan deze alsnog de unlock-key roteren of de swarm manipuleren. Locking is dus een krachtige aanvulling, maar geen vervanging voor goede server-harding.
 :::
 
-### 5. node labels
+### 5. Node labels
 We hebben gezien dat we constraints kunnen gebruiken om te bepalen op welke nodes een service mag draaien, maar momenteel hebben we enkel een onderscheid tussen manager- en worker-nodes. Soms willen we echter meer specifieke criteria gebruiken, zoals het besturingssysteem, de locatie of de hardwarecapaciteiten van een node. Hiervoor kunnen we gebruik maken van labels.
 
-Labels zijn key-value paren die we kunnen toewijzen aan nodes in de swarm. We kunnen deze labels vervolgens gebruiken in onze service-definities om te specificeren dat een service alleen op nodes met bepaalde labels mag draaien. Bijvoorbeeld we hebben het label `os=linux`
+Labels zijn key-value paren die we kunnen toewijzen aan nodes in de swarm. We kunnen deze labels vervolgens gebruiken in onze service-definities om te specificeren dat een service alleen op nodes met bepaalde labels mag draaien. Stel bijvoorbeeld dat we het label `os=linux` willen gebruiken:
 ```bash
 docker node update --label-add os=linux node1
 ```
@@ -80,13 +85,12 @@ docker service create \
     --mount type=volume,source=mydbdata,target=/var/lib/postgresql/data \
     postgres:latest
 ```
-In dit voorbeeld maken we een postgres database service aan en kopppelen we een volume genaamd `mydbdata` aan de data directory van postgres. Zoals eerder vermeld is dit volume echter alleen toegankelijk voor containers die op dezelfde node draaien als het volume, wat betekent dat als we deze service schalen over meerdere nodes, elke container zijn eigen lokale volume zal hebben en geen toegang zal hebben tot de data van de andere containers.
+In dit voorbeeld maken we een postgres database service aan en koppelen we een volume genaamd `mydbdata` aan de data directory van postgres. Zoals eerder vermeld is dit volume echter alleen toegankelijk voor containers die op dezelfde node draaien als het volume, wat betekent dat als we deze service schalen over meerdere nodes, elke container zijn eigen lokale volume zal hebben en geen toegang zal hebben tot de data van de andere containers.
 
 ### 7. Distributed storage
 Om het probleem van node-local volumes op te lossen, kunnen we gebruik maken van een distributed storage oplossing zoals NFS, GlusterFS of Ceph. Deze oplossingen maken het mogelijk om een gedeeld volume te creëren dat toegankelijk is voor containers op verschillende nodes in de swarm. Hierdoor kunnen stateful applicaties zoals databases nog steeds profiteren van de voordelen van multi-host orchestration zonder zich zorgen te hoeven maken over data consistentie of beschikbaarheid.
 
-De exacte werking hierachter behandelen we niet
-
+De exacte werking hierachter en hoe we dit opzetten bekijken we kort in het labo. Dit is echter niet iets wat we standaard in Docker Swarm nodig hebben.
 ### 8. Global services
 Tot nu toe hebben we alleen services gezien die worden geschaald over meerdere nodes, waarbij we het aantal replica's hebben gespecificeerd. Maar stel nu dat we een service willen hebben die op elke node in de swarm draait, ongeacht het aantal nodes? Hiervoor kunnen we gebruik maken van global services.
 ```bash

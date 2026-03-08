@@ -99,7 +99,7 @@ flowchart LR
         DE3["Docker engine"]
         C1["webserver-1 v. 2.0"]
         C2["Aan het updaten..."]
-        C3["webserver-3" v. 1.0]
+        C3["webserver-3 v. 1.0"]
   end
   
     I["internet"] --> Cluster
@@ -113,7 +113,8 @@ flowchart LR
     DE3 --> C3
 ```
 ### 3. Docker Swarm Mode
-Docker Swarm is een native clustering en scheduling tool voor Docker containers. We gebruiken dit om onze containers te orchestreren over meerdere machines. Het is sterk gelijkend op Docker Compose, maar dan met extra functionaliteiten voor clustering en schaalbaarheid.
+
+Docker Swarm is een clustering orchestration tool. Je hebt mogelijk al gehoord van Kubernetes, wat een andere populaire orchestration tool is. Docker Swarm is oorspronkelijk gestart als Docker Swarm Classic in 2014. Dit was een standalone proejct dat niet geïntegreerd was met Docker, maar wel gebruik maakte van de Docker API. In 2016 werd Docker Swarm Mode geïntroduceerd in Docker 1.12. Hierbij werd de volledige clustering functionaliteit geïntegreerd in de Docker Engine zelf, waardoor het veel eenvoudiger werd om een swarm cluster op te zetten en te beheren. Wanneer we dus spreken van een host die in swarm mode draait, spreken we van een machine waarop docker is geïnstalleerd en waarop de swarm functionaliteit is geactiveerd. We zien later wat dit precies inhoudt en hoe we dit kunnen doen.
 
 ### 4. De "Swarm"
 In Docker Swarm noemen we de groep van machines die samenwerken een "swarm". Een swarm bestaat uit meerdere nodes waarbij elke node een machine is waarop Docker draait. Deze verschillende containers zijn verbonden via een Docker overlay netwerk, waardoor ze met elkaar kunnen communiceren alsof ze op dezelfde machine draaien.
@@ -150,7 +151,7 @@ Bij het opzetten van een Docker Swarm cluster in een cloudomgeving, zoals AWS, A
 :::
 
 ### 8. Configs en secrets
-We hebben eerder bij Docker Compose al gezien dat we gebruik kunnen maken van environment variables om gevoelige informatie, zoals wachtwoorden door te geven aan onze containers. Dit was al een verbetering ten opzichte van het hard-coderen van deze informatie in onze docker-compose.yml bestanden, maar het heeft nog steeds enkele nadelen. Zo kunnen environment variables nog steeds worden uitgelezen door iedereen die toegang heeft tot de container, wat een beveiligingsrisico kan vormen.
+Het is een standaard best practice om gevoelige informatie, zoals wachtwoorden, API-sleutels of certificaten, niet op te slaan in de broncode, omdat deze in versiebeheer terecht kunnen komen daardoor. Bij Docker compose hebben we gezien dat we environment variables (`.env` bestanden) kunnen gebruiken om deze informatie te beheren. Echter, dit is niet ideaal, omdat deze environment variables nog steeds ergens in cleartext op de hostmachine moeten staan. Daarnaast kunnen ze ook worden uitgelezen met het commando `docker inspect`, waar ze ook in cleartext worden weergegeven.
 
 In Docker Swarm hebben we daarom het concept van "configs" en "secrets". Configs zijn bedoeld voor het beheren van niet-gevoelige configuratiegegevens, zoals configuratiebestanden of instellingen die door de applicatie worden gebruikt. Secrets daarentegen zijn specifiek ontworpen voor het veilig opslaan en beheren van gevoelige informatie, zoals wachtwoorden, API-sleutels of certificaten.
 

@@ -47,7 +47,7 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
-  themes: ['@docusaurus/theme-mermaid', '@docusaurus/theme-search-algolia'],
+  themes: ['@docusaurus/theme-mermaid'],
   presets: [
     [
       'classic',
@@ -107,8 +107,6 @@ const config: Config = {
       // Optional: whether the insights feature is enabled or not on Docsearch (`false` by default)
       insights: false,
 
-      // Optional: whether you want to use the new Ask AI feature (undefined by default)
-      askAi: 'YOUR_ALGOLIA_ASK_AI_ASSISTANT_ID',
 
       //... other Algolia params
     },

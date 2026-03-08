@@ -29,6 +29,7 @@ const config: Config = {
   projectName: 'docusaurus', // Usually your repo name.
 
   onBrokenLinks: 'throw',
+  trailingSlash: false,
 
   headTags: [
     {

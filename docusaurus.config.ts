@@ -150,15 +150,15 @@ const config: Config = {
           items: [
             {
               label: 'Web Frameworks',
-              to: '/docs/web-frameworks/',
+              to: '/web-frameworks',
             },
             {
               label: 'Python',
-              to: '/docs/python/',
+              to: '/python',
             },
             {
                 label: "ICT Architecture",
-                to: "/docs/ict-architecture/"
+                to: "/ict-architecture"
             }
           ],
         },

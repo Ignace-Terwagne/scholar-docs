@@ -49,14 +49,24 @@ const config: Config = {
     locales: ['en'],
   },
   themes: ['@docusaurus/theme-mermaid'],
+  plugins: [
+    [
+      '@docusaurus/plugin-client-redirects',
+      {
+        createRedirects(existingPath: string) {
+          // Redirect /docs/... to /...
+          return [`/docs${existingPath}`];
+        },
+      },
+    ],
+  ],
   presets: [
     [
       'classic',
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          // Please change this to your repo.
-          // Remove this to remove the "edit this page" links.
+          routeBasePath: '/',
         },
         blog: {
           showReadingTime: true,

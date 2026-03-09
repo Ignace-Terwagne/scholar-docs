@@ -1,4 +1,8 @@
 {
     "label": "Labo's",
-    "collapsed": false
+    "collapsed": false,
+    "link": {
+        "type": "generated-index",
+        "title": "Labo's"
+        }
 }

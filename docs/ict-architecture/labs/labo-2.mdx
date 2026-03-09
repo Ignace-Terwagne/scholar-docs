@@ -1,0 +1,278 @@
+---
+id: ict-arch-lab-2
+title: 'Labo 2: Vervolg Docker Swarm Mode'
+sidebar_label: 'Labo 2 - Docker Swarm Mode'
+sidebar_position: 3
+---
+
+# Labo 2: Vervolg Docker Swarm Mode
+
+In dit labo gaan we verder met Docker Swarm Mode. We gaan een eenvoudige mysql database opzetten om het gedrag van stateful services in een swarm te bestuderen.
+
+:::info[Wat is een stateful service?]
+Een stateful service is een service die afhankelijk is van de staat (data) die het genereert of gebruikt. Een database beschouwen we als een stateful service, want de data die erin zit is essentieel voor de werking van de service. Als we een database container verwijderen, verliezen we de data tenzij we deze opslaan op een externe locatie (zoals een volume).
+:::
+
+### Benodigdheden:
+Voor dit labo maken we gebruik van 2 ubuntu machines. De uitleg is opgesteld om de machines als 2 VM's op dezelfde host te gebruiken, maar je kan dit ook maken met 2 fysieke machines. De machines moeten wel in hetzelfde netwerk zitten zodat ze elkaar kunnen bereiken.
+
+Het is belangrijk dat de machines en statisch IP-adres hebben. Anders loop je het risico dat de cluster niet meer werkt als je een machine herstart, omdat deze een nieuw IP-adres krijgt. In dit labo gebruiken we de volgende IP-adressen:
+| Machine | IP-adres |
+| --- | --- |
+| ict-arch-ubuntu-1 | 192.168.130.170 |
+| ict-arch-ubuntu-2 | 192.168.130.171 |
+
+```mermaid
+graph LR
+    A[ict-arch-ubuntu-1] --- VMNet
+    VMNet --- B[ict-arch-ubuntu-2]
+```
+:::info[Tip]
+In de komende labo's zullen we gebruik maken van een gelijkaardige opstelling met 2-3 machines. Het is dus handig om na de installatie van docker op de machines, een snapshot te maken. Zo heb je een startpunt vanwaar je steeds opnieuw kan beginnen zonder telkens docker te installeren. Sommige labo's bouwen wel voort op de vorige labo's, maar dan kan je altijd terug gaan, mocht er iets misgaan.
+:::
+
+### 1. Zet de swarm op
+Zoals we al in het vorig labo hebben gezien, zetten we een swarm op door op één van de machines het commando `docker swarm init` uit te voeren. Dit zal de machine promoten tot manager en een token genereren die we nodig hebben om de andere machine toe te voegen als worker.
+```bash title="ict-arch-ubuntu-1"
+docker swarm init --advertise-addr 192.168.130.170
+```
+```bash title="ict-arch-ubuntu-2"
+docker swarm join --token SWMTKN-1-0ayn2x2zui83uaia4i3o9eur9hokbz0m6c7tos8je47fggpb4x-23hkz7pf0cn6qlo68tbid26za 192.168.130.170:2377
+```
+*Vervang het token en IP-adres door de waarden die je krijgt bij het uitvoeren van het `docker swarm init` commando.*
+
+Na het uitvoeren van deze commando's, zou je op de manager machine moeten zien dat er 2 nodes in de swarm zitten:
+```bash title="ict-arch-ubuntu-1"
+docker node ls
+```
+:::info
+Is het onduidelijk waarom of hoe dit werkt? Bekijk dan de uitleg van [Labo 1](./labo-1.mdx) nog eens.
+:::
+### 2. Zet de mysql service op
+Nu we een swarm hebben, kunnen we een service deployen. We gaan een mysql database gebruiken met de image `mysql:9.6`.
+Voor deze stap maken we nog geen gebruik van secrets. We willen wel al een database `ApplicationDB` aanmaken met een tabel `ApplicationData`. Dit kunnen we doen aan de hand van een opstartscript dat we meegeven aan de container. Maak op de manager-node een bestand `init.sql` aan met de volgende inhoud:
+```sql title="init.sql"
+CREATE DATABASE IF NOT EXISTS ApplicationDB;
+USE ApplicationDB;
+CREATE TABLE IF NOT EXISTS ApplicationData (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    data VARCHAR(255) NOT NULL
+);
+```
+Om dit bestand nu te kunnen gebruiken als config in de swarm, moeten we het eerst toevoegen aan de swarm. We kunnen dit doen met het commando `docker config create`:
+```bash title="ict-arch-ubuntu-1"
+docker config create db-init.sql init.sql
+```
+We kunnen nu dit bestand aanroepen bij het creëren van de service. We gebruiken hiervoor `--config`. Dit zorgt ervoor dat het bestand beschikbaar is in de container op het pad `/docker-entrypoint-initdb.d/init.sql`. De mysql image zal automatisch alle scripts in deze map uitvoeren bij het opstarten van de container.
+```bash title="ict-arch-ubuntu-1"
+docker service create \
+    --name mysql \
+    --replicas 1 \
+    --config source=db-init.sql,target=/docker-entrypoint-initdb.d/init.sql \
+    -e MYSQL_ROOT_PASSWORD=my-secret-pw \
+    mysql:9.6
+```
+:::info[Merk op]
+We geven de environment variable `MYSQL_ROOT_PASSWORD` mee om een root wachtwoord in te stellen voor de mysql database. In een productieomgeving zou je dit niet in clear text willen doen, maar voor deze labo is dit voldoende.
+:::
+
+### 3. Update de mysql config
+We gaan nu, terwijl de mysql service nog steeds draait, de config aanpassen. We voegen standaard een rij toe aan de tabel met de waarde "Hello World".
+Pas het bestand `init.sql`aan op de manager-node als volgt:
+```sql title="init.sql"
+CREATE DATABASE IF NOT EXISTS ApplicationDB;
+USE ApplicationDB;
+CREATE TABLE IF NOT EXISTS ApplicationData (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    data VARCHAR(255) NOT NULL
+);
+
+-- highlight-next-line
+INSERT INTO ApplicationData (data) VALUES ('Hello World');
+```
+Log nu in op de mysql container en kijk of de nieuwe rij is toegevoegd:
+```bash title="ict-arch-ubuntu-1"
+docker exec -it <container-id> mysql -u root -p
+```
+:::note[Opmerking]
+Het kan ook dat de container zich bevindt op de worker node (`ict-arch-ubuntu-2`), in dat geval moet je het commando uitvoeren op die machine. Om de container-id te vinden kan je het commando `docker ps` gebruiken op beide machines. Je kan ook het commando `docker service ps mysql` gebruiken op de manager-node om te zien op welke node de container draait.
+:::
+Eenmaal je bent ingelogd in de mysql shell, kan je eenvoudig controleren of de rij is toegevoegd met het volgende commando:
+```sql
+USE ApplicationDB;
+SELECT * FROM ApplicationData;
+```
+**Wat gebeurt er?**
+<details>
+<summary>Antwoord en uitleg</summary>
+
+Je zou moeten merken dat de database en tabel nog steeds bestaan, maar dat de nieuwe rij niet is toegevoegd. Dit komt doordat configs in Docker Swarm read-only zijn en niet rechtstreeks gelinkt zijn met het bestand waarmee ze zijn aangemaakt.
+We kunnen dit ook nakijken met het commando `docker config inspect db-init.sql` op de manager-node. Dit geeft een output die er gelijkaardig uitziet als volgt:
+```json
+[
+    {
+        "ID": "sbunsp9cmwue9h7y0illpnx69",
+        "Version": {
+            "Index": 426
+        },
+        "CreatedAt": "2026-03-09T22:19:56.133644603Z",
+        "UpdatedAt": "2026-03-09T22:19:56.133644603Z",
+        "Spec": {
+            "Name": "db-init.sql",
+            "Labels": {},
+            "Data": "Q1JFQVRFIERBVEFCQVNFIElGIE5PVCBFWElTVFMgQXBwbGljYXRpb25EQjsKVVNFIEFwcGxpY2F0aW9uREI7CkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIEFwcGxpY2F0aW9uRGF0YSAoCiAgICBpZCBJTlQgQVVUT19JTkNSRU1FTlQgUFJJTUFSWSBLRVksCiAgICBkYXRhIFZBUkNIQVIoMjU1KSBOT1QgTlVMTAopOwo="
+        }
+    }
+]
+```
+Wat voor ons belangrijk is, is de waarde van `Data`. Deze waarde lijkt misschien onleesbaar, maar dit is eigenlijk de inhoud van het bestand `init.sql`in base64 gecodeerd. Als we deze waarde decoderen, krijgen we terug de oorspronkelijke inhoud van het bestand:
+```bash title="ict-arch-ubuntu-1"
+base64 -d Q1JFQVRFIERBVEFCQVNFIElGIE5PVCBFWElTVFMgQXBwbGljYXRpb25EQjsKVVNFIEFwcGxpY2F0aW9uREI7CkNSRUFURSBUQUJMRSBJRiBOT1QgRVhJU1RTIEFwcGxpY2F0aW9uRGF0YSAoCiAgICBpZCBJTlQgQVVUT19JTkNSRU1FTlQgUFJJTUFSWSBLRVksCiAgICBkYXRhIFZBUkNIQVIoMjU1KSBOT1QgTlVMTAopOwo=
+```
+Dit geeft als output:
+```sql
+CREATE DATABASE IF NOT EXISTS ApplicationDB;
+USE ApplicationDB;
+CREATE TABLE IF NOT EXISTS ApplicationData (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    data VARCHAR(255) NOT NULL
+);
+```
+Zoals je kan zien, is de nieuwe rij die we hebben toegevoegd, niet aanwezig in de config. De config is dus niet gelinkt aan het bestand `init.sql`. Wanneer we de config aanpassen, moeten we opnieuw een nieuwe config aanmaken en de service updaten om deze nieuwe config te gebruiken. 
+
+Echter mysql zal bij het opstarten enkel de scripts in de map `/docker-entrypoint-initdb.d/` uitvoeren als er nog geen database is aangemaakt. Aangezien we al een database hebben, zal het script niet opnieuw worden uitgevoerd en zal de nieuwe rij niet worden toegevoegd. Dit is een belangrijk concept om te begrijpen bij het werken met stateful services in een swarm.
+</details>
+
+### 4. Verwijder de mysql service
+Voeg eerst manueel 2 rijen toe aan de tabel `ApplicationData` in de mysql database. Dit kan je doen door in te loggen op de mysql container en het volgende commando uit te voeren:
+```sql
+USE ApplicationDB;
+INSERT INTO ApplicationData (data) VALUES ('Row 1'), ('Row 2');
+SELECT * FROM ApplicationData;
+```
+Je zou nu 2 rijen moeten zien. 
+Verwijder nu de mysql service:
+```bash title="ict-arch-ubuntu-1"
+docker service rm mysql
+```
+Maak de mysql service opnieuw aan met hetzelfde commando als in stap 2. Controleer nu opnieuw de inhoud van de tabel `ApplicationData`. **Wat zie je? Waarom?**
+<details>
+<summary>Antwoord en uitleg</summary>
+
+Je zou moeten zien dat de database en tabel nog steeds bestaan, maar de 2 rijen die we manueel hebben toegevoegd, zijn verdwenen. Dit komt doordat we geen volume hebben meegegeven. De mysql container slaat de data op in de map `/var/lib/mysql` in de container. Wanneer we de service verwijderen, worden ook de containers verwijderd en daarmee ook de data die in deze map zit. Aangezien we geen volume hebben meegegeven, is er geen externe opslag voor de data en gaat deze verloren bij het verwijderen van de service.
+
+</details>
+
+Verwijder nu de mysql service opnieuw.
+
+### 5. Voeg secrets toe aan de mysql service
+In de vorige stappen hebben we het root wachtwoord voor de ysqml database in clear text meegegeven als environment variable. Dit is niet veilig, want iedereen die toegang heeft tot de manager-node kan deze waarde zien. We kunnen dit ook testen met het commando `docker service inspect mysql`
+op de manager-node. In de output van dit commando zie je onder de kop `Spec.TaskTemplate.ContainerSpec.Env` de environment variables die we hebben meegegeven, inclusief het root wachtwoord in clear text.
+```json
+
+    "Env": [
+        "MYSQL_ROOT_PASSWORD=my-secret-pw"
+    ],
+
+```
+Om dit veiliger te maken, kunnen we gebruik maken van secrets. Secrets zijn een manier om gevoelige informatie op te slaan en te beheren in een swarm. We kunnen een secret aanmaken met het commando `docker secret create`:
+```bash title="ict-arch-ubuntu-1"
+echo "my-secret-pw" | docker secret create mysql_root_password -
+```
+Het nadeel van deze werkwijze is dat het wachtwoord nog steeds in clear text in de command history staat. Je kan dit terugzien als je het commando `history` uitvoert op de manager-node. In een productieomgeving gaan we dus gebruik maken van een file om het wachtwoord in een secret te steken. 
+Verwijder eerst de secret die we net hebben aangemaakt:
+```bash title="ict-arch-ubuntu-1"
+docker secret rm mysql_root_password
+```
+Maak een bestand `mysql_root_password.txt`aan met de volgende inhoud:
+```txt title="mysql_root_password.txt"
+my-secret-pw
+```
+En gebruik dit bestand om de secret aan te maken:
+```bash title="ict-arch-ubuntu-1"
+docker secret create mysql_root_password mysql_root_password.txt
+```
+Nu we de secret hebben aangemaakt, kunnen we deze gebruiken bij het creëren van de mysql service. We gebruiken hiervoor `--secret`. Dit zorgt ervoor dat de secret beschikbaar is in de container op het pad `/run/secrets/mysql_root_password`.
+```bash title="ict-arch-ubuntu-1"
+docker service create \
+    --name mysql \
+    --replicas 1 \
+    --config source=db-init.sql,target=/docker-entrypoint-initdb.d/init.sql \
+    --secret source=mysql_root_password,target=mysql_root_password \
+    -e MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_root_password \
+    mysql:9.6
+```
+:::info[Merk op]
+We hebben nu de environment variable `MYSQL_ROOT_PASSWORD_FILE` meegegeven in plaats van `MYSQL_ROOT_PASSWORD`. De mysql image ondersteunt namelijk ook het lezen van het wachtwoord uit een bestand. Door deze environment variable mee te geven, zal mysql het wachtwoord lezen uit het bestand dat we hebben meegegeven als secret.
+:::
+Kan je nu nog steeds het root wachtwoord zien?
+<details>
+<summary>Antwoord en uitleg</summary>
+
+Je zou nu moeten zien dat het root wachtwoord niet meer in clear text in de output van `docker service inspect mysql`staat. In plaats daarvan zie je onder de kop `Spec.TaskTemplate.ContainerSpec.Secrets` dat er een secret is meegegeven met de naam `mysql_root_password`. Deze secret is beschikbaar in de container op het pad `/run/secrets/mysql_root_password`. Je kan deze waarde bekijken door in te loggen op de mysql container en het volgende commando uit te voeren:
+```bash title="ict-arch-ubuntu-1"
+cat /run/secrets/mysql_root_password
+```
+Dit geeft als output:
+```txt
+my-secret-pw
+```
+Dus in de container zelf is het wachtwoord wel beschikbaar, maar het is niet meer zichtbaar in clear text op de manager-node.
+
+Je zou misschien hebben opgemerkt dat we op de host wel nog steeds een bestand `mysql_root_password.txt` hebben staan. Dit bestand bevat nog steeds het wachtwoord in clear text. Aangezien we dit bestand enkel nodig hebben voor het aanmaken van een secret, kunnen we dit nadien gerust verwijderen.
+</details>
+
+### 6. Voeg persistentie toe aan de mysql service
+Zoals we hebben gezien in stap 4, gaat de data van de mysql database verloren wanneer we de service verwijderen. Dit komt doordat we geen volume hebben meegegeven. We kunnen dit oplossen door een volume toe te voegen aan de service. We gebruiken hiervoor `--mount`. Dit zorgt ervoor dat de map `/var/lib/mysql` in de container wordt gemount op een volume genaamd `mysql_data`. Dit volume zal de data van de mysql database opslaan, zodat deze behouden blijft wanneer we de service verwijderen.
+```bash title="ict-arch-ubuntu-1"
+docker service create \
+    --name mysql \
+    --replicas 1 \
+    --config source=db-init.sql,target=/docker-entrypoint-initdb.d/init.sql \
+    --secret source=mysql_root_password,target=mysql_root_password \
+    --mount type=volume,source=mysql_data,target=/var/lib/mysql \
+    -e MYSQL_ROOT_PASSWORD_FILE=/run/secrets/mysql_root_password \
+    mysql:9.6
+```
+Nu we een volume hebben toegevoegd, kunnen we de service verwijderen en opnieuw aanmaken zonder dat de data verloren gaat.
+Voeg eerst manueel 2 rijen toe aan de tabel `ApplicationData` in de mysql database. Dit kan je doen door in te loggen op de mysql container en het volgende commando uit te voeren:
+```sql
+USE ApplicationDB;
+INSERT INTO ApplicationData (data) VALUES ('Row 1'), ('Row 2');
+SELECT * FROM ApplicationData;  
+```
+Je zou nu 2 rijen moeten zien.
+
+### 7. update de mysql config en schaal de service op
+We gaan nu het bestand `init.sql` opnieuw aanpassen. We voegen een nieuwe rij toe aan de tabel `ApplicationData` met de waarde "Hello World 2".
+```sql title="init.sql"
+CREATE DATABASE IF NOT EXISTS ApplicationDB;
+USE ApplicationDB;
+CREATE TABLE IF NOT EXISTS ApplicationData (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    data VARCHAR(255) NOT NULL
+);
+INSERT INTO ApplicationData (data) VALUES ('Hello World 2');
+```
+Maak nu een nieuwe config aan met deze aangepaste inhoud:
+```bash title="ict-arch-ubuntu-1"
+docker config create db-init-v2.sql init.sql
+```
+Om nu het probleem dat we in stap 3 hebben gezien op te lossen, moeten we de service updaten om deze nieuwe config te gebruiken. We gebruiken hiervoor `docker service update`. We verwijderen eerst de oude config en voegen vervolgens de nieuwe config toe.
+```bash title="ict-arch-ubuntu-1"
+docker service update \
+    --config-rm db-init.sql \
+    --config-add source=db-init-v2.sql,target=/docker-entrypoint-initdb.d/init.sql \
+    mysql
+```
+We gaan ook de service opschalen naar 2 replicas, zodat we op beide nodes een mysql container hebben draaien. Dit kunnen we doen met het commando `docker service scale`:
+```bash title="ict-arch-ubuntu-1"
+docker service scale mysql=2
+```
+
+Controleer nu opnieuw de inhoud van de tabel `ApplicationData`. **Wat zie je? Waarom?**
+<details>
+<summary>Antwoord en uitleg</summary>
+
+Je zal zien dat de database en tabel nu bestaan, alsook de rij "Hello World 2". Wanneer we de service updaten, wordt er in feite een nieuwe 
+</details>

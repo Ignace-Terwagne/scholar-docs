@@ -235,15 +235,8 @@ docker service create \
     mysql:9.6
 ```
 Nu we een volume hebben toegevoegd, kunnen we de service verwijderen en opnieuw aanmaken zonder dat de data verloren gaat.
-Voeg eerst manueel 2 rijen toe aan de tabel `ApplicationData` in de mysql database. Dit kan je doen door in te loggen op de mysql container en het volgende commando uit te voeren:
-```sql
-USE ApplicationDB;
-INSERT INTO ApplicationData (data) VALUES ('Row 1'), ('Row 2');
-SELECT * FROM ApplicationData;  
-```
-Je zou nu 2 rijen moeten zien.
 
-### 7. update de mysql config en schaal de service op
+### 7. update de mysql config opnieuw
 We gaan nu het bestand `init.sql` opnieuw aanpassen. We voegen een nieuwe rij toe aan de tabel `ApplicationData` met de waarde "Hello World 2".
 ```sql title="init.sql"
 CREATE DATABASE IF NOT EXISTS ApplicationDB;
@@ -265,14 +258,34 @@ docker service update \
     --config-add source=db-init-v2.sql,target=/docker-entrypoint-initdb.d/init.sql \
     mysql
 ```
+<details>
+<summary>Antwoord en uitleg</summary>
+
+Je zou moeten zien dat de nieuwe rij "Hello World 2" nu wel is toegevoegd aan de tabel `ApplicationData`. Dit komt doordat de nieuwe config is gekoppeld en dit script gerund wordt bij de start van een nieuwe container. Wanneer we de service updaten, zal Docker Swarm automatisch een nieuwe container starten met deze nieuwe config. 
+
+We kunnen dit ook controleren met het commando `docker service inspect mysql` dat we eerder hebben gebruikt. Met `base64 -d <config-data>` kunnen we de inhoud van de config decoderen en zien dat deze nu de instructie voor de nieuwe rij bevat.
+</details>
 We gaan ook de service opschalen naar 2 replicas, zodat we op beide nodes een mysql container hebben draaien. Dit kunnen we doen met het commando `docker service scale`:
 ```bash title="ict-arch-ubuntu-1"
 docker service scale mysql=2
 ```
 
-Controleer nu opnieuw de inhoud van de tabel `ApplicationData`. **Wat zie je? Waarom?**
+Normaal gezien zou je nu moeten zien dat beide nodes een mysql container hebben draaien. Indien dit niet het geval is, kan je het commando `docker service ps mysql` gebruiken om te zien op welke node de containers draaien en of er eventuele fouten zijn bij het starten van de containers.
+
+Log in op de container op de worker node en voeg manueel een rij toe aan de tabel `ApplicationData` met de waarde "Row on worker node". 
+```sql title="ict-arch-ubuntu-2"
+USE ApplicationDB;
+INSERT INTO ApplicationData (data) VALUES ('Row on worker node');
+SELECT * FROM ApplicationData;
+```
+Log nu in op de container op de manager node. Wat zie je in de tabel `ApplicationData`? Waarom?
 <details>
+
 <summary>Antwoord en uitleg</summary>
 
-Je zal zien dat de database en tabel nu bestaan, alsook de rij "Hello World 2". Wanneer we de service updaten, wordt er in feite een nieuwe 
+Je zou moeten zien dat de rij "Row on worker node" enkel zichtbaar is in de container op de worker node en niet in de container op de manager node. Toch maken we gebruik van een gelijk volume, dus zou de data toch gesynchroniseerd moeten zijn tussen de containers? Dit komt doordat we gebruik maken van een volume driver, namelijk `local`. Deze driver maakt gebruik van de lokale opslag van de node waarop de container draait. Dit betekent dat het volume op elke node een aparte opslag heeft. 
+
+Wanneer de swarm dus is opgeschaald naar 2 replica's en er 2 containers zijn gestart, heeft elke container zijn eigen volume op de node waarop deze draait. De data die in deze volumes worden opgeslagen, is dus niet gesynchroniseerd tussen de containers. 
+
+Hoe we dit kunnen oplossen is aan de hand van een distributed storage oplossing. We gaan hiervoor `CephFS` gebruiken. In de volgende labo's zullen we deze distributed storage oplossing opzetten en gebruiken in onze swarm.
 </details>

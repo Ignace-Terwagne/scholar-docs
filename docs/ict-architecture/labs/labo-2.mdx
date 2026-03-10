@@ -265,6 +265,8 @@ Je zou moeten zien dat de nieuwe rij "Hello World 2" nu wel is toegevoegd aan de
 
 We kunnen dit ook controleren met het commando `docker service inspect mysql` dat we eerder hebben gebruikt. Met `base64 -d <config-data>` kunnen we de inhoud van de config decoderen en zien dat deze nu de instructie voor de nieuwe rij bevat.
 </details>
+
+### 8. Schaal de mysql service op
 We gaan ook de service opschalen naar 2 replicas, zodat we op beide nodes een mysql container hebben draaien. Dit kunnen we doen met het commando `docker service scale`:
 ```bash title="ict-arch-ubuntu-1"
 docker service scale mysql=2

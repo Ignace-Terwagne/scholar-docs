@@ -186,20 +186,15 @@ Een gangbare structuur voor een ADR ziet er als volgt uit:
 
 Een ADR doorloopt verschillende toestanden tijdens zijn leven:
 
-```
-[Nieuwe beslissing]
-    ↓
-  RFC (Request for Comment)
-    ↓
-Intern overleg nodig? ──Nee──→ Accepted
-    ↓ Ja
-  Proposed
-    ↓
-  Accepted
-    ↓
-Nieuwe informatie? ──Ja──→ Superseded (verwijs naar nieuwe ADR)
-    ↓ Nee
-Blijft Accepted
+```mermaid
+flowchart TD
+    A[Nieuwe beslissing] --> B{Intern overleg nodig?}
+    B -->|Ja| C[Proposed]
+    B -->|Nee| D[Accepted]
+    C --> D
+    D --> E{Nieuwe informatie?}
+    E -->|Ja| F[Superseded<br/>verwijs naar nieuwe ADR]
+    E -->|Nee| G[Blijft Accepted]
 ```
 
 Een ADR wordt dus **nooit verwijderd**, zelfs niet als de beslissing achterhaald is. In plaats daarvan krijgt het de status "Superseded" met een verwijzing naar de nieuwe ADR die hem vervangt. Dit zorgt voor een volledig historisch overzicht van alle architecturale beslissingen.

@@ -5,6 +5,8 @@ sidebar_label: 4. Software architectuur verantwoorden
 sidebar_position: 4
 ---
 
+import CodeBlock from '@theme/CodeBlock';
+
 # 4. Software architectuur verantwoorden
 In het vorige hoofdstukken hebben we gezien wat een software architectuur is en welke verschillende onderdelen erin zijn. Tijdens dit hoofdstuk gaan we dieper in op het verantwoorden en documenteren van deze architectuur.
 
@@ -95,3 +97,154 @@ Welke karakteristieken hiervan zijn de meest kritische? Welke zijn nu de driving
 | Internationalization | Ja | Nee |
 | Customizability | Ja | Nee |
 </details>
+
+### 4. Architecturale beslissingen
+Nu we de karakteristieken hebben gekozen, kunnen we kijken naar de tweede dimensie van software architectuur. De architecturale beslissingen. 
+
+:::info[Opfrissing]
+De architecturale beslissingen zijn de keuzes die we maken in onze architectuur om aan de karakteristieken te voldoen. Ze zijn de "hoe" van onze architectuur. Neem bijvoorbeeld scalability (schaalbaarheid). Eén van de architecturale beslissingen die we kunnen maken om hieraan te voldoen is het gebruik van asynchrone communicatie en message queues. Hierdoor kunnen we beter omgaan met pieken in verkeer en kunnen we makkelijker opschalen.
+:::
+
+We hebben eerder gezegd dat deze beslissingen de "hoe" zijn van het systeem, maar eigenlijk is dat niet het belangrijkste. Het belangrijkste is dat we weten "waarom" we deze beslissingen maken. We moeten kunnen verantwoorden waarom we bepaalde keuzes maken in onze architectuur.
+
+### 5. Tweede wet van software architectuur
+De tweede wet van software architectuur is:
+> **Why is more important than how**
+
+Hoe de architectuur is opgebouwd, dat zie je in de code zelf. Maar waarom bepaalde keuzes zijn gemaakt is de belangrijkste informatie voor teams die later aan het systeem moeten werken. Neem het volgende voorbeeld:
+We krijgen een API die communiceert via XML requests en responses. We kunnen hieruit afleiden dat de architecturale beslissing was om XML te gebruiken als dataformaat. Maar waarom XML? Waarom niet JSON, wat vandaag de facto standaard is? 
+
+De kans is groot dat deze API uit de jaren 2000 komt, toen XML de standaard was. Er waren toen ook al JSON libraries, maar deze begon pas de standaard te worden rond 2008. Het zou dus een perfect juiste beslissing kunnen zijn om dit te herschrijven naar JSON, maar misschien is er een goede reden waarom dit niet is gebeurd. Misschien was er geen tijd of budget om te herschrijven, of misschien was er een andere reden. Zonder deze context kunnen we niet goed inschatten of het een goede beslissing is om al dan niet verder te werken volgens dezelfde architecturale beslissingen.
+
+### 6. Architectural Decision Records (ADRs)
+We hebben nu gezien dat het documenteren van de beslissingen belangrijk is, maar hoe doen we dat? We kunnen gebruik maken van een simpel textbestand waar we ons idee in uitschrijven, maar dit zorgt door de tijd heen voor een hoop ongestructureerde informatie. Het is beter om een gestructureerd format te gebruiken, zo is het gemakkelijk om nieuwe en oude beslissingen te begrijpen, ook al heb je nog nooit van het project gehoord of heb je de oorspronkelijke ontwikkelaar niet gesproken.
+
+Een veelgebruikt format hiervoor zijn de Architectural Decision Records (ADRs). Deze bestaan uit een aantal vaste onderdelen:
+| Onderdeel | beschrijving |
+|---|---|
+| Titel | Een korte titel die de beslissing samenvat |
+| Status | De status van de beslissing (proposed, accepted, rejected, deprecated, superseded) |
+| Context | De context waarin de beslissing is genomen |
+| decision | De beslissing zelf, wat is er gekozen? |
+| Consequences | De gevolgen van deze beslissing, zowel positief als negatief |
+| governance | Hoe wordt de beslissing opgevolgd? Wie moet er op de hoogte gebracht worden? |
+| notes | Eventuele extra notities of links naar relevante informatie |
+
+
+ADR's hebben ook enkele belangrijke eigenschappen:
+
+#### Geen user-facing docs
+
+ADR's zijn geen documentatie voor (eind)gebruikers. Ze zijn bedoeld voor ontwikkelaars en andere teamleden. Technische taal is dus geen probleem en soms zelfs een vereiste.
+
+#### Structuur
+Zoals eerder gezegd is het belangrijk dat ADR's een gestructureerd format hebben. Hier is geen algemene standaard voor, maar het is wel belangrijk dat het format consistent blijft binnen een project.
+#### plain-text
+Voor ADR's hoeft er geen speciale documentatietool of software gebruikt te worden. Best worden ze bewaard in plain-text bestanden (bv. Markdown). Dit voorkomt dat de ADR's die jaren geleden gemaakt zijn, niet meer leesbaar zijn omdat ze verouderde software vereisen om ze te openen. Door gebruik te maken van plain-text bestanden, kunnen ze ook gemakkelijk worden opgenomen in versiebeheersystemen.
+#### Eén beslissing per ADR
+Elke ADR mag maar één beslissing bevatten. Dit zorgt ervoor dat elke beslissing zijn eigen beredenering en context heeft, maar ook dat als er in de toekomst slechts één beslissing verandert we niet 5 ADR's moeten vervangen. 
+#### Neutrale taal
+ADR's zijn geschreven met een focus op beschrijvende taal: "we hebben besloten om X te doen omdat Y", in plaats van "we moeten X doen omdat Y". We proberen zo weinig mogelijk subjectieve taal te gebruiken, of bias. Een slecht voorbeeld zou zijn "We gebruiken XML omdat dit de beste standaard op de markt is." Dit is subjectief en kan allereerst leiden tot discussie, maar geeft ook een vervaagd beeld in de toekomst. Misschien was XML de beste keuze op dat moment, maar dat is niet meer het geval. Een beter voorbeeld zou zijn "We gebruiken XML omdat dit de standaard was op het moment dat we deze beslissing namen." Dit is een feitelijke uitspraak die niet onderhevig is aan discussie en geeft ook een duidelijk beeld van de context waarin deze beslissing is genomen. Nog beter zou zijn "We gebruiken XML omdat dit de standaard was op het moment dat we deze beslissing namen. We maken geen gebruik van JSON omdat dit nog niet de standaard was en er geen tijd was om te herschrijven." Dit geeft nog meer context en maakt het duidelijk dat er een afweging is gemaakt tussen XML en JSON, en waarom XML is gekozen.
+#### Toevoegen mag, aanpassen niet
+ADRs werken volgens een append-only principe. Dit betekent dat wanneer we een oude beslissing willen aanpassen, we niet de oude ADR aanpassen, maar een nieuwe ADR toevoegen die de oude beslissing vervangt. De oude ADR verandert dan van status naar "superseded". Op deze manier behouden we de geschiedenis van onze beslissingen. 
+
+Ook wanneer een beslissing niet langer van toepassing is, passen we de oude ADR niet meer aan. We veranderen de status van de oude ADR naar "deprecated".
+
+### 7. De levenscyclus van een ADR
+Een ADR heeft een levenscyclus als volgt:
+1. Proposed: de beslissing is voorgesteld, maar nog niet geaccepteerd.
+2. Accepted: de beslissing is geaccepteerd en wordt geïmplementeerd.
+3. Rejected: de beslissing is afgewezen en zal niet worden geïmplementeerd.
+4. Deprecated: de beslissing is verouderd en zal in de toekomst worden vervangen.
+5. Superseded: de beslissing is vervangen door een nieuwe beslissing.
+
+```mermaid
+---
+config:
+    direction TB
+---
+stateDiagram-v2
+    state proposed_choice <<choice>>
+    state accepted_choice <<choice>>
+	[*] --> proposed
+    proposed --> proposed_choice : overleg nodig
+    proposed_choice --> accepted : akkoord
+    proposed_choice --> rejected : geen akkoord
+    accepted --> accepted_choice
+    accepted_choice --> superseded : nieuwe beslissing
+    accepted_choice --> deprecated : verouderd
+    deprecated --> [*]
+    rejected --> [*]
+    superseded --> [*]
+```
+
+Zoals eerder gezegd, wordt een ADR dus nooit verwijderd of aangepast. Het enige wat in een ADR kan veranderen nadat deze voorbij de proposal fase is, is de status. Ook is het zeer belangrijk om de rejected ADR's te behouden. Deze geven namelijk een goed beeld van de afwegingen die zijn gemaakt. Misschien is er in de toekomst een reden om een beslissing die eerder is afgewezen toch te implementeren, of misschien is er een nieuwe technologie die het mogelijk maakt om een beslissing die eerder is geaccepteerd te vervangen door een betere beslissing. Door de geschiedenis van onze beslissingen te behouden, kunnen we beter geïnformeerde keuzes maken in de toekomst.
+
+### 8. Casus - Two Many Sneakers
+We kijken terug naar de casus van Two Many Sneakers van het vorige hoofdstuk.
+:::info[Opfrissing]
+Two Many Sneakers is een bedrijf met een succesvolle mobiele app voor schoenenverzamelaars, waarmee gebruikers sneakers kunnen kopen, verkopen en ruilen.
+
+De oorspronkelijke architectuur was eenvoudig:mobile app → trading service → database. Door de groei van het platform ontstonden nieuwe noden zoals real-time notificaties, analytics/fraudedetectie en betere schaalbaarheid.
+
+Daarom werd de architectuur uitgebreid met extra services (zoals notifications en analytics) en onderzocht het team asynchrone communicatie via message queues/topics om de koppeling te verlagen en het systeem uitbreidbaar te maken.
+:::
+
+Een ADR van de beslissing voor asynchrone communicatie via message queues zou er als volgt kunnen uitzien:
+
+<CodeBlock language="markdown" className="wrapCode">
+{`#### title
+012: gebruik van queues voor asynchrone messaging vanaf tradingdienst
+
+#### status
+accepted
+
+#### context
+De trading service moet andere diensten (voorlopig: analytics en notifications) op de hoogte brengen van nieuwe producten en van elke verkoop. We hebben twee opties overwogen:
+1. Web services (REST API calls): de trading service roept direct de API's van andere services aan
+2. Asynchrone messaging (queues of topics): de trading service publiceert berichten naar een bus
+
+Karakteristieken die meespelen: scalability (pieken in gebruik), fault tolerance (services mogen niet afhankelijk zijn van elkaar), extensibility (in de toekomst komen er meer services bij).
+
+#### decision
+We zullen message queues gebruiken. Queues maken het systeem veelzijdig, aangezien elke queue andere soorten berichten kan afleveren aan verschillende consumers. Ze maken het systeem ook veiliger, aangezien de trading service steeds weet welke queue voor welke service bedoeld is. De trading service hanteert het "fire and forget" principe: berichten worden naar de queues gestuurd zonder te wachten op bevestiging, waardoor de trading service niet vertraagd wordt.
+
+#### consequences
+(+) De koppeling tussen de trading service en consumer-services is losser. Als een consumer-service uitvalt, blijven de berichten in de queue staan tot de service weer online is.
+(+) We kunnen eenvoudig nieuwe consumer-services toevoegen zonder de trading service aan te passen (zolang ze bestaande berichtformaten gebruiken).
+(-) De koppeling tussen de trading service en de queues zelf is hoger: elke nieuwe queue moet expliciet ondersteund worden door de trading service.
+(-) We moeten infrastructuur voor de queues voorzien (RabbitMQ, monitoring, backups).
+
+(werk): We moeten berichtformaten (schemas) documenteren en versioneren.
+
+#### governance
+- Alle developers worden getraind in het gebruik van RabbitMQ.
+- Nieuwe services die berichten van de trading service nodig hebben, moeten een ADR schrijven voor de benodigde queue.
+- Code reviews controleren of berichten correct gepubliceerd worden naar de juiste queues.
+
+#### notes
+ Zie ook ADR 008 (keuze voor RabbitMQ als message broker). In de toekomst kunnen we overwegen om over te stappen op een centraal topic, maar dit vereist meer security maatregelen.`}
+</CodeBlock>
+:::info[tip]
+ADR is een concept waar je zeer uitgebreid in kan gaan. Binnen deze cursus gaan we er niet dieper op in , maar extra informatie, tools, templates en best practices kan je [hier](https://adr.github.io/) vinden.
+:::
+### 9. Logische componenten
+We hebben onze karakteristieken gekozen en onze architecturale beslissingen gemaakt, nu komen we aan de derde dimensie van software architectuur: de logische componenten. 
+
+Logische componenten zijn de **bouwstenen** van een systeem. Je kan ze vergelijken met de kamers in een huis: elke kamer heeft een specifieke functie (slaapkamer, keuken, badkamer, woonkamer) en er is een logische reden waarom bepaalde activiteiten in bepaalde kamers plaatsvinden.
+
+:::warning[Belangrijk]
+Logische componenten zijn geen fysieke componenten of code. Ze zijn dus **geen**:
+- microservices
+- docker containers
+- Controllers of modules in je code
+- klassen of functies 
+:::
+
+Enkele voorbeelden van logische componenten zijn:
+- Gebruikersbeheer
+- Productcatalogus
+- Bestellingen
+- Rapportage
+- Notificaties
+- Betalingsverwerking

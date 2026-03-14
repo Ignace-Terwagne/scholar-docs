@@ -8,7 +8,7 @@ sidebar_position: 4
 import CodeBlock from '@theme/CodeBlock';
 
 # 4. Software architectuur verantwoorden
-In het vorige hoofdstukken hebben we gezien wat een software architectuur is en welke verschillende onderdelen erin zijn. Tijdens dit hoofdstuk gaan we dieper in op het verantwoorden en documenteren van deze architectuur.
+In het vorige hoofdstuk hebben we gezien wat een software architectuur is en welke verschillende onderdelen erin zijn. Tijdens dit hoofdstuk gaan we dieper in op het verantwoorden en documenteren van deze architectuur.
 
 ### 1. Karakteristieken
 Zoals we in het vorige hoofdstuk hebben gezien, is één van de 4 dimensies van software architectuur de karakteristieken. De karakteristieken geven aan **hoe** een systeem werkt, niet **wat** het systeem doet. Een systeem dat wel functioneel is, maar crasht onder hoge belasting is waardeloos.
@@ -28,7 +28,7 @@ Het is belangrijk om de juiste karakteristieken te kiezen voor ons systeem. We k
 > Everything is a trade-off
 We moeten dus een afweging maken tussen de verschillende karakteristieken. De vuistregel is om 7 karakteristieken te kiezen. Hierdoor hebben we er niet te veel, waardoor we geen focus verliezen, maar ook niet te weinig, waardoor we belangrijke karakteristieken missen. 
 
-Binnen deze 7 karakteristieken, duiden we er 3 aan als "driving" karakterstieken. Deze zijn de belangrijkste karakteristieken voor ons systeem. Ze hebben dan ook de meeste impact op de architectuur van ons systeem.
+Binnen deze 7 karakteristieken, duiden we er 3 aan als "driving" karakteristieken. Deze zijn de belangrijkste karakteristieken voor ons systeem. Ze hebben dan ook de meeste impact op de architectuur van ons systeem.
 
 :::info[tip]
 Wees niet te vaag in het kiezen van de karakteristieken. "Performance" is bijvoorbeeld een te vage karakteristiek. Het is beter om te kiezen voor "response time" of "throughput".
@@ -36,14 +36,14 @@ Wees niet te vaag in het kiezen van de karakteristieken. "Performance" is bijvoo
 Een uitgebreide lijst van karakteristieken kan je vinden in de [ISO/IEC 25010 standaard](https://en.wikipedia.org/wiki/ISO/IEC_25010).
 :::
 
-#### documenteren van karakteristieken
+#### Documenteren van karakteristieken
 Om deze karakteristieken te documenteren, kunnen we gebruik maken van een tabel. In de tabel geven we aan welke karakteristieken we hebben gekozen, of ze expliciet vermeld zijn in de requirements, en welke karakteristieken de driving karakteristieken zijn.
 Bijvoorbeeld:
 | Karakteristiek | Expliciet vermeld in requirements? | Meest kritisch (driving)? |
 |---|---|---|
 | Scalability | Ja | **Ja** |
 | Elasticity | Ja | **Ja** |
-| Fault tolerance | Nee | **Ja**
+| Fault tolerance | Nee | **Ja** |
 | Integrity | Nee | Nee |
 | Customizability | Ja | Nee |
 
@@ -123,7 +123,7 @@ Een veelgebruikt format hiervoor zijn de Architectural Decision Records (ADRs). 
 | Onderdeel | beschrijving |
 |---|---|
 | Titel | Een korte titel die de beslissing samenvat |
-| Status | De status van de beslissing (proposed, accepted, rejected, deprecated, superseded) |
+| Status | De status van de beslissing (proposed, accepted, rejected, superseded) |
 | Context | De context waarin de beslissing is genomen |
 | decision | De beslissing zelf, wat is er gekozen? |
 | Consequences | De gevolgen van deze beslissing, zowel positief als negatief |
@@ -150,7 +150,35 @@ ADRs werken volgens een append-only principe. Dit betekent dat wanneer we een ou
 
 Ook wanneer een beslissing niet langer van toepassing is, passen we de oude ADR niet meer aan. We veranderen de status van de oude ADR naar "deprecated".
 
-### 7. De levenscyclus van een ADR
+### 7. Van RFC naar ADR
+Wanneer een voorstel wordt gedaan spreken we van een RFC, een zogenaamde "Request For Comments". Dit is een voorstel dat oproept tot discussie. Het is nog geen definitieve beslissing en er is ook nog geen keuze gemaakt. Tijdens deze proposal fase wordt de RFC dan in een ADR omgezet en krijgt deze de status "proposed". Na overleg en discussie kan deze ADR dan geaccepteerd of afgewezen worden.
+
+Er is wel een belangrijke nuance tussen een RFC en een ADR. Een RFC is simpelweg een losse neergeschreven versie van een idee. Het is nog niet gestructureerd. (vaak wordt er in een bedrijf wel een template gebruikt voor RFC's, maar dit is niet verplicht). Een voorbeeld van een RFC kan zijn:
+<CodeBlock language="markdown" className="wrapCode">
+{`# RFC: Asynchrone communicatie via message queues
+
+**status:** proposed
+
+**need:**
+De trading service moet andere diensten (analytics, notifications) op de hoogte brengen van nieuwe producten en verkopen. Op dit moment communiceert de trading service rechtstreeks met andere services via REST API calls. Dit zorgt voor een sterke koppeling: als de notifications-service uitvalt, heeft dit ook impact op de trading service. We hebben een oplossing nodig die de services losser koppelt en beter bestand is tegen pieken in gebruik.
+
+**approach:**
+Invoeren van message queues (bv. RabbitMQ) als communicatielaag tussen de trading service en consumer-services. De trading service publiceert berichten naar specifieke queues; elke consumer-service leest berichten uit zijn eigen queue. De trading service werkt volgens het "fire and forget" principe: berichten worden verstuurd zonder te wachten op bevestiging.
+
+**alternatives:**
+- REST API calls (synchrone communicatie): eenvoudig te implementeren, maar sterke koppeling. Als een consumer-service uitvalt, heeft dit rechtstreeks impact op de trading service.
+- Pub/Sub via een centraal topic: flexibeler dan queues, maar vereist extra security-maatregelen om te bepalen welke service welke berichten mag lezen.
+
+**references:**
+- Teamgesprek 12/03/2026: consensus dat de huidige directe koppeling een risico vormt bij uitval.
+- Zie ook RFC-008 over de selectie van RabbitMQ als message broker.
+
+**update log:**
+- 12/03/2026 – J. De Smedt: initieel voorstel opgesteld na uitval van notifications-service tijdens piekmoment.
+- 13/03/2026 – A. Peeters: alternatieven aangevuld na intern overleg.`}
+</CodeBlock>
+
+### 8. De levenscyclus van een ADR
 Een ADR heeft een levenscyclus als volgt:
 1. Proposed: de beslissing is voorgesteld, maar nog niet geaccepteerd.
 2. Accepted: de beslissing is geaccepteerd en wordt geïmplementeerd.
@@ -164,23 +192,22 @@ config:
     direction TB
 ---
 stateDiagram-v2
+
     state proposed_choice <<choice>>
     state accepted_choice <<choice>>
-	[*] --> proposed
+    [*] --> RFC 
+	RFC --> proposed : bespreken en omzetten naar ADR
     proposed --> proposed_choice : overleg nodig
     proposed_choice --> accepted : akkoord
     proposed_choice --> rejected : geen akkoord
-    accepted --> accepted_choice
-    accepted_choice --> superseded : nieuwe beslissing
-    accepted_choice --> deprecated : verouderd
-    deprecated --> [*]
+    accepted --> superseded : nieuwe beslissing / verouderd
     rejected --> [*]
     superseded --> [*]
 ```
 
 Zoals eerder gezegd, wordt een ADR dus nooit verwijderd of aangepast. Het enige wat in een ADR kan veranderen nadat deze voorbij de proposal fase is, is de status. Ook is het zeer belangrijk om de rejected ADR's te behouden. Deze geven namelijk een goed beeld van de afwegingen die zijn gemaakt. Misschien is er in de toekomst een reden om een beslissing die eerder is afgewezen toch te implementeren, of misschien is er een nieuwe technologie die het mogelijk maakt om een beslissing die eerder is geaccepteerd te vervangen door een betere beslissing. Door de geschiedenis van onze beslissingen te behouden, kunnen we beter geïnformeerde keuzes maken in de toekomst.
 
-### 8. Casus - Two Many Sneakers
+### 9. Casus - Two Many Sneakers
 We kijken terug naar de casus van Two Many Sneakers van het vorige hoofdstuk.
 :::info[Opfrissing]
 Two Many Sneakers is een bedrijf met een succesvolle mobiele app voor schoenenverzamelaars, waarmee gebruikers sneakers kunnen kopen, verkopen en ruilen.
@@ -228,7 +255,8 @@ We zullen message queues gebruiken. Queues maken het systeem veelzijdig, aangezi
 :::info[tip]
 ADR is een concept waar je zeer uitgebreid in kan gaan. Binnen deze cursus gaan we er niet dieper op in , maar extra informatie, tools, templates en best practices kan je [hier](https://adr.github.io/) vinden.
 :::
-### 9. Logische componenten
+
+### 10. Logische componenten
 We hebben onze karakteristieken gekozen en onze architecturale beslissingen gemaakt, nu komen we aan de derde dimensie van software architectuur: de logische componenten. 
 
 Logische componenten zijn de **bouwstenen** van een systeem. Je kan ze vergelijken met de kamers in een huis: elke kamer heeft een specifieke functie (slaapkamer, keuken, badkamer, woonkamer) en er is een logische reden waarom bepaalde activiteiten in bepaalde kamers plaatsvinden.
@@ -248,3 +276,72 @@ Enkele voorbeelden van logische componenten zijn:
 - Rapportage
 - Notificaties
 - Betalingsverwerking
+
+Logische componenten zijn een manier om de architectuur van een systeem te structureren.
+
+#### Stap 1: Initiële kerncomponenten
+We beginnen met het identificeren van de initiële kerncomponenten van ons systeem. Dit zijn de componenten die essentieel zijn voor de werking van het systeem en die direct gerelateerd zijn aan de belangrijkste functionaliteiten. Om deze te bepalen kunnen we gebruik maken van 2 technieken:
+
+##### Workflow
+Bij de workflow approach bekijken we het systeem vanuit het perspectief van de gebruiker. We doorlopen zo de conceptuele stappen van één typische user journey, één scenario van hoe een gebruiker het systeem zou kunnen gebruiken. Elke stap in die journey kan leiden tot een aparte logische component. Daarbij gelden drie richtlijnen:
+
+1. standaard hebben alle verschillende stappen elk hun eigen component
+2. Sterk verwante stappen kunnen samengevoegd worden in één component
+3. Complexe stappen kunnen opgesplitst worden in meerdere componenten
+
+Stel dus dat we de volgende workflow hebben voor "meedoen en winnen":
+```mermaid
+graph TB
+    A[Registreren voor de veiling] --> B[Aanmelden bij de start] --> C[Veiling bekijken] --> D[Bod plaatsen] --> E[Betalen]
+```
+Hier kunnen we dus 5 componenten van maken die elk een stap in deze workflow 
+##### Actor/action
+De actor/action approach is handig als het systeem meerdere soorten gebruikers heeft. Je somt de belangrijkste handelingen per actor op en verbindt die handelingen met componenten. Je verbindt ook componenten onderling als ze van elkaar afhankelijk zijn.
+
+Naast menselijke actoren (gebruikers, beheerders, operators, ...) is er ook een "System" actor voor automatische acties die het systeem zelf uitvoert (bijvoorbeeld geplande taken, achtergrondprocessen).
+
+**Online veiling (met meerdere actoren):**
+> We hebben een online veilingplatform waar gebruikers kunnen bieden op items. Er is een livestream van de veiling, en er is een fysieke locatie waar de veilingmeester de biedingen bijhoudt en items als verkocht markeert. Het systeem verwerkt ook betalingen en volgt biederactiviteit op.
+
+We hebben drie actoren:
+- Kate (online bieder): zoekt een veiling, kijkt de livestream, plaatst een bod
+- Sam (veilingmeester ter plaatse): start de veiling, registreert biedingen van ter plaatse, markeert items als verkocht
+- System (automatisch): verwerkt betalingen, volgt biederactiviteit op
+
+Dit leidt tot de volgende toewijzing:
+
+| Actor | Actie | Component |
+|---|---|---|
+| Kate | Zoekt een veiling | `AuctionSearch` |
+| Kate | Bekijkt livestream | `VideoStreamer` |
+| Kate | Plaatst een bod (online) | `BidCapture` |
+| Sam | Start/beheert veiling | `LiveAuctionSession` |
+| Sam | Voert een live bod in (ter plaatse) | `BidCapture` |
+| Sam | Markeert item als verkocht | `LiveAuctionSession` |
+| System | Verwerkt betaling automatisch | `AutomaticPayment` |
+| System | Volgt biederactiviteit op | `BidderTracker` |
+
+En de communicatie tussen componenten:
+- `BidCapture` stuurt biedingen door naar `BidderTracker` (voor analyse)
+- `LiveAuctionSession` vertelt `AutomaticPayment` wie er moet betalen
+- `LiveAuctionSession` stuurt start/stop signalen naar `BidderTracker`
+
+Merk op dat `BidCapture` door zowel Kate als Sam gebruikt wordt, het is een gedeeld component voor alle biedingen, ongeacht de bron.
+
+:::info[Combinatie van beiden]
+In de praktijk is het perfect mogelijk om beiden te combineren. Je kan bijvoorbeeld eerst de actoren en hun acties onderscheiden en vervolgens op deze verschillende acties de workflow benaderen. Zo krijg je een nog beter beeld van de verschillende componenten en hun onderlinge relaties.
+Dit is een optie, maar de exacte techniek die je gebruikt hangt af van het systeem
+:::
+##### Valkuil: de entity trap
+Een veelgemaakte fout is de entity trap: een component krijgt te veel verantwoordelijkheden, waardoor het onduidelijk is wat het precies doet. Dit risico is extra groot bij vage namen zoals "supervisor" of "manager". Deze namen zeggen niets over wat het component precies doet, waardoor het moeilijk is om te begrijpen wat de verantwoordelijkheden van het component zijn.
+
+
+Als een component zo'n vage naam heeft, stel jezelf dan de vraag: "Wat doet dit component precies?"
+
+Als het antwoord meer dan één duidelijke verantwoordelijkheid omvat, moet je het component opsplitsen. Bijvoorbeeld:
+
+`UserManager` die zowel authenticatie, profielbeheer als notificaties doet
+
+Dit zou dus beter worden opgesplitst in `Authentication`, `UserProfile` en `Notifications` als aparte componenten.
+
+

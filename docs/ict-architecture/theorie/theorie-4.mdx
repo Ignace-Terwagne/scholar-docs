@@ -26,6 +26,7 @@ Deze karakteristieken eindigen vaak op -ility. Ze worden ook wel de "ilities" ge
 ### 2. De juiste karakteristieken kiezen
 Het is belangrijk om de juiste karakteristieken te kiezen voor ons systeem. We kunnen niet gewoon alle karakteristieken kiezen. Als we terugdenken aan de eerste wet:
 > Everything is a trade-off
+
 We moeten dus een afweging maken tussen de verschillende karakteristieken. De vuistregel is om 7 karakteristieken te kiezen. Hierdoor hebben we er niet te veel, waardoor we geen focus verliezen, maar ook niet te weinig, waardoor we belangrijke karakteristieken missen. 
 
 Binnen deze 7 karakteristieken, duiden we er 3 aan als "driving" karakteristieken. Deze zijn de belangrijkste karakteristieken voor ons systeem. Ze hebben dan ook de meeste impact op de architectuur van ons systeem.
@@ -412,7 +413,7 @@ Op dit moment zijn onze logische componenten gebaseerd op de requirements. Dit i
 | Karakteristiek | Beschrijving |
 |---|---|
 | Scalability | Het systeem moet kunnen omgaan met pieken in verkeer tijdens populaire veilingen |
-| availibility | Het systeem moet 24/7 beschikbaar zijn, vooral tijdens veilingen |
+| availibility | Het systeem moet 24/7 beschikbaar zijn |
 | security | Gevoelige gebruikersdata en betalingsinformatie moeten goed beschermd zijn |
 
 Stel dat we even dieper gaan kijken naar Scalability. We hebben een component: `BidCapture` die verantwoordelijk is voor het ontvangen van biedingen en deze opslaan om ze vervolgens door te sturen naar de veilingmeester. Dit zou er dus zo uit kunnen zien:

@@ -1,0 +1,543 @@
+---
+id: ict-arch-theo-4
+title: 4. Software architectuur verantwoorden
+sidebar_label: 4. Software architectuur verantwoorden
+sidebar_position: 4
+---
+
+import CodeBlock from '@theme/CodeBlock';
+
+# 4. Software architectuur verantwoorden
+In het vorige hoofdstuk hebben we gezien wat een software architectuur is en welke verschillende onderdelen erin zijn. Tijdens dit hoofdstuk gaan we dieper in op het verantwoorden en documenteren van deze architectuur.
+
+### 1. Karakteristieken
+Zoals we in het vorige hoofdstuk hebben gezien, is één van de 4 dimensies van software architectuur de karakteristieken. De karakteristieken geven aan **hoe** een systeem werkt, niet **wat** het systeem doet. Een systeem dat wel functioneel is, maar crasht onder hoge belasting is waardeloos.
+
+Enkele voorbeelden van karakteristieken zijn:
+- Scalability: hoe goed kan het systeem omgaan met een toenemende hoeveelheid werk?
+- Reliability: hoe betrouwbaar is het systeem? Hoe vaak crasht het?
+- Availability: hoe vaak is het systeem beschikbaar voor gebruik?
+- Maintainability: hoe gemakkelijk is het om het systeem te onderhouden en aan te passen?
+
+:::info[Merk op]
+Deze karakteristieken eindigen vaak op -ility. Ze worden ook wel de "ilities" genoemd. 
+:::
+
+### 2. De juiste karakteristieken kiezen
+Het is belangrijk om de juiste karakteristieken te kiezen voor ons systeem. We kunnen niet gewoon alle karakteristieken kiezen. Als we terugdenken aan de eerste wet:
+> Everything is a trade-off
+We moeten dus een afweging maken tussen de verschillende karakteristieken. De vuistregel is om 7 karakteristieken te kiezen. Hierdoor hebben we er niet te veel, waardoor we geen focus verliezen, maar ook niet te weinig, waardoor we belangrijke karakteristieken missen. 
+
+Binnen deze 7 karakteristieken, duiden we er 3 aan als "driving" karakteristieken. Deze zijn de belangrijkste karakteristieken voor ons systeem. Ze hebben dan ook de meeste impact op de architectuur van ons systeem.
+
+:::info[tip]
+Wees niet te vaag in het kiezen van de karakteristieken. "Performance" is bijvoorbeeld een te vage karakteristiek. Het is beter om te kiezen voor "response time" of "throughput".
+
+Een uitgebreide lijst van karakteristieken kan je vinden in de [ISO/IEC 25010 standaard](https://en.wikipedia.org/wiki/ISO/IEC_25010).
+:::
+
+#### Documenteren van karakteristieken
+Om deze karakteristieken te documenteren, kunnen we gebruik maken van een tabel. In de tabel geven we aan welke karakteristieken we hebben gekozen, of ze expliciet vermeld zijn in de requirements, en welke karakteristieken de driving karakteristieken zijn.
+Bijvoorbeeld:
+| Karakteristiek | Expliciet vermeld in requirements? | Meest kritisch (driving)? |
+|---|---|---|
+| Scalability | Ja | **Ja** |
+| Elasticity | Ja | **Ja** |
+| Fault tolerance | Nee | **Ja** |
+| Integrity | Nee | Nee |
+| Customizability | Ja | Nee |
+
+### 3. Casus - Sillycon Symposia
+Laten we nogmaals terugkijken naar de casus van Sillycon Symposia en hun sociaal medium Lafter.
+
+**Requirements:**
+- Honderden sprekers en duizenden bezoekers
+- Gebruikers kunnen accounts aanmaken
+- Gebruikers kunnen "jokes" (lange teksten) en "puns" (korte teksten) maken
+- Berichten tot 281 tekens sturen
+- Links posten
+- Bezoekers kunnen sprekers volgen
+- Reageren met "Haha" of "Giggle"
+- Sprekers hebben een eigen icoontje
+- Sprekers kunnen een forum opzetten
+
+**Context:**
+- Platform moet beschikbaar zijn in verschillende landen
+- Klein supportteam
+- Pieken in verkeer tijdens conferenties
+
+Welke architecturale karakteristieken leiden we hieruit af?
+
+<details>
+<summary>Antwoord</summary>
+
+| Requirement / context | Afleiding | Karakteristiek |
+|---|---|---|
+| Honderden sprekers, duizenden bezoekers | Het systeem moet veel gelijktijdige gebruikers aankunnen | **Scalability** |
+| Pieken tijdens conferenties | Het systeem moet snel kunnen op- en afschalen bij plotse drukte | **Elasticity** |
+| Accounts bepalen eigenaarschap | Data moet correct en consistent blijven | **Integrity** |
+| Beschikbaar over verschillende landen | Meertaligheid, tijdzones, regionale wetgeving | **Internationalization** |
+| Forums en icoontjes aanmaken | Het platform moet aanpasbaar zijn per gebruiker/spreker | **Customizability** |
+| Klein supportteam | Het systeem moet zelf fouten kunnen opvangen zonder veel menselijke tussenkomst | **Fault tolerance** |
+
+</details>
+
+Welke karakteristieken hiervan zijn de meest kritische? Welke zijn nu de driving karakteristieken?
+
+<details>
+<summary>Antwoord</summary>
+
+
+| Karakteristiek | Expliciet vermeld in requirements? | Meest kritisch (driving)? |
+|---|---|---|
+| Scalability | Ja | **Ja** |
+| Elasticity | Ja | **Ja** |
+| Fault tolerance | Nee (afgeleid uit "klein supportteam") | **Ja** |
+| Integrity | Nee (afgeleid uit accounts/eigenaarschap) | Nee |
+| Internationalization | Ja | Nee |
+| Customizability | Ja | Nee |
+</details>
+
+### 4. Architecturale beslissingen
+Nu we de karakteristieken hebben gekozen, kunnen we kijken naar de tweede dimensie van software architectuur. De architecturale beslissingen. 
+
+:::info[Opfrissing]
+De architecturale beslissingen zijn de keuzes die we maken in onze architectuur om aan de karakteristieken te voldoen. Ze zijn de "hoe" van onze architectuur. Neem bijvoorbeeld scalability (schaalbaarheid). Eén van de architecturale beslissingen die we kunnen maken om hieraan te voldoen is het gebruik van asynchrone communicatie en message queues. Hierdoor kunnen we beter omgaan met pieken in verkeer en kunnen we makkelijker opschalen.
+:::
+
+We hebben eerder gezegd dat deze beslissingen de "hoe" zijn van het systeem, maar eigenlijk is dat niet het belangrijkste. Het belangrijkste is dat we weten "waarom" we deze beslissingen maken. We moeten kunnen verantwoorden waarom we bepaalde keuzes maken in onze architectuur.
+
+### 5. Tweede wet van software architectuur
+De tweede wet van software architectuur is:
+> **Why is more important than how**
+
+Hoe de architectuur is opgebouwd, dat zie je in de code zelf. Maar waarom bepaalde keuzes zijn gemaakt is de belangrijkste informatie voor teams die later aan het systeem moeten werken. Neem het volgende voorbeeld:
+We krijgen een API die communiceert via XML requests en responses. We kunnen hieruit afleiden dat de architecturale beslissing was om XML te gebruiken als dataformaat. Maar waarom XML? Waarom niet JSON, wat vandaag de facto standaard is? 
+
+De kans is groot dat deze API uit de jaren 2000 komt, toen XML de standaard was. Er waren toen ook al JSON libraries, maar deze begon pas de standaard te worden rond 2008. Het zou dus een perfect juiste beslissing kunnen zijn om dit te herschrijven naar JSON, maar misschien is er een goede reden waarom dit niet is gebeurd. Misschien was er geen tijd of budget om te herschrijven, of misschien was er een andere reden. Zonder deze context kunnen we niet goed inschatten of het een goede beslissing is om al dan niet verder te werken volgens dezelfde architecturale beslissingen.
+
+### 6. Architectural Decision Records (ADRs)
+We hebben nu gezien dat het documenteren van de beslissingen belangrijk is, maar hoe doen we dat? We kunnen gebruik maken van een simpel textbestand waar we ons idee in uitschrijven, maar dit zorgt door de tijd heen voor een hoop ongestructureerde informatie. Het is beter om een gestructureerd format te gebruiken, zo is het gemakkelijk om nieuwe en oude beslissingen te begrijpen, ook al heb je nog nooit van het project gehoord of heb je de oorspronkelijke ontwikkelaar niet gesproken.
+
+Een veelgebruikt format hiervoor zijn de Architectural Decision Records (ADRs). Deze bestaan uit een aantal vaste onderdelen:
+| Onderdeel | beschrijving |
+|---|---|
+| Titel | Een korte titel die de beslissing samenvat |
+| Status | De status van de beslissing (proposed, accepted, rejected, superseded) |
+| Context | De context waarin de beslissing is genomen |
+| decision | De beslissing zelf, wat is er gekozen? |
+| Consequences | De gevolgen van deze beslissing, zowel positief als negatief |
+| governance | Hoe wordt de beslissing opgevolgd? Wie moet er op de hoogte gebracht worden? |
+| notes | Eventuele extra notities of links naar relevante informatie |
+
+
+ADR's hebben ook enkele belangrijke eigenschappen:
+
+#### Geen user-facing docs
+
+ADR's zijn geen documentatie voor (eind)gebruikers. Ze zijn bedoeld voor ontwikkelaars en andere teamleden. Technische taal is dus geen probleem en soms zelfs een vereiste.
+
+#### Structuur
+Zoals eerder gezegd is het belangrijk dat ADR's een gestructureerd format hebben. Hier is geen algemene standaard voor, maar het is wel belangrijk dat het format consistent blijft binnen een project.
+#### plain-text
+Voor ADR's hoeft er geen speciale documentatietool of software gebruikt te worden. Best worden ze bewaard in plain-text bestanden (bv. Markdown). Dit voorkomt dat de ADR's die jaren geleden gemaakt zijn, niet meer leesbaar zijn omdat ze verouderde software vereisen om ze te openen. Door gebruik te maken van plain-text bestanden, kunnen ze ook gemakkelijk worden opgenomen in versiebeheersystemen.
+#### Eén beslissing per ADR
+Elke ADR mag maar één beslissing bevatten. Dit zorgt ervoor dat elke beslissing zijn eigen beredenering en context heeft, maar ook dat als er in de toekomst slechts één beslissing verandert we niet 5 ADR's moeten vervangen. 
+#### Neutrale taal
+ADR's zijn geschreven met een focus op beschrijvende taal: "we hebben besloten om X te doen omdat Y", in plaats van "we moeten X doen omdat Y". We proberen zo weinig mogelijk subjectieve taal te gebruiken, of bias. Een slecht voorbeeld zou zijn "We gebruiken XML omdat dit de beste standaard op de markt is." Dit is subjectief en kan allereerst leiden tot discussie, maar geeft ook een vervaagd beeld in de toekomst. Misschien was XML de beste keuze op dat moment, maar dat is niet meer het geval. Een beter voorbeeld zou zijn "We gebruiken XML omdat dit de standaard was op het moment dat we deze beslissing namen." Dit is een feitelijke uitspraak die niet onderhevig is aan discussie en geeft ook een duidelijk beeld van de context waarin deze beslissing is genomen. Nog beter zou zijn "We gebruiken XML omdat dit de standaard was op het moment dat we deze beslissing namen. We maken geen gebruik van JSON omdat dit nog niet de standaard was en er geen tijd was om te herschrijven." Dit geeft nog meer context en maakt het duidelijk dat er een afweging is gemaakt tussen XML en JSON, en waarom XML is gekozen.
+#### Toevoegen mag, aanpassen niet
+ADRs werken volgens een append-only principe. Dit betekent dat wanneer we een oude beslissing willen aanpassen, we niet de oude ADR aanpassen, maar een nieuwe ADR toevoegen die de oude beslissing vervangt. De oude ADR verandert dan van status naar "superseded". Op deze manier behouden we de geschiedenis van onze beslissingen. 
+
+Ook wanneer een beslissing niet langer van toepassing is, passen we de oude ADR niet meer aan. We veranderen de status van de oude ADR naar "deprecated".
+
+### 7. Van RFC naar ADR
+Wanneer een voorstel wordt gedaan spreken we van een RFC, een zogenaamde "Request For Comments". Dit is een voorstel dat oproept tot discussie. Het is nog geen definitieve beslissing en er is ook nog geen keuze gemaakt. Tijdens deze proposal fase wordt de RFC dan in een ADR omgezet en krijgt deze de status "proposed". Na overleg en discussie kan deze ADR dan geaccepteerd of afgewezen worden.
+
+Er is wel een belangrijke nuance tussen een RFC en een ADR. Een RFC is simpelweg een losse neergeschreven versie van een idee. Het is nog niet gestructureerd. (vaak wordt er in een bedrijf wel een template gebruikt voor RFC's, maar dit is niet verplicht). Een voorbeeld van een RFC kan zijn:
+<CodeBlock language="markdown" className="wrapCode">
+{`# RFC: Asynchrone communicatie via message queues
+
+**status:** proposed
+
+**need:**
+De trading service moet andere diensten (analytics, notifications) op de hoogte brengen van nieuwe producten en verkopen. Op dit moment communiceert de trading service rechtstreeks met andere services via REST API calls. Dit zorgt voor een sterke koppeling: als de notifications-service uitvalt, heeft dit ook impact op de trading service. We hebben een oplossing nodig die de services losser koppelt en beter bestand is tegen pieken in gebruik.
+
+**approach:**
+Invoeren van message queues (bv. RabbitMQ) als communicatielaag tussen de trading service en consumer-services. De trading service publiceert berichten naar specifieke queues; elke consumer-service leest berichten uit zijn eigen queue. De trading service werkt volgens het "fire and forget" principe: berichten worden verstuurd zonder te wachten op bevestiging.
+
+**alternatives:**
+- REST API calls (synchrone communicatie): eenvoudig te implementeren, maar sterke koppeling. Als een consumer-service uitvalt, heeft dit rechtstreeks impact op de trading service.
+- Pub/Sub via een centraal topic: flexibeler dan queues, maar vereist extra security-maatregelen om te bepalen welke service welke berichten mag lezen.
+
+**references:**
+- Teamgesprek 12/03/2026: consensus dat de huidige directe koppeling een risico vormt bij uitval.
+- Zie ook RFC-008 over de selectie van RabbitMQ als message broker.
+
+**update log:**
+- 12/03/2026 – J. De Smedt: initieel voorstel opgesteld na uitval van notifications-service tijdens piekmoment.
+- 13/03/2026 – A. Peeters: alternatieven aangevuld na intern overleg.`}
+</CodeBlock>
+
+### 8. De levenscyclus van een ADR
+Een ADR heeft een levenscyclus als volgt:
+1. Proposed: de beslissing is voorgesteld, maar nog niet geaccepteerd.
+2. Accepted: de beslissing is geaccepteerd en wordt geïmplementeerd.
+3. Rejected: de beslissing is afgewezen en zal niet worden geïmplementeerd.
+4. Deprecated: de beslissing is verouderd en zal in de toekomst worden vervangen.
+5. Superseded: de beslissing is vervangen door een nieuwe beslissing.
+
+```mermaid
+---
+config:
+    direction TB
+---
+stateDiagram-v2
+
+    state proposed_choice <<choice>>
+    state accepted_choice <<choice>>
+    [*] --> RFC 
+	RFC --> proposed : bespreken en omzetten naar ADR
+    proposed --> proposed_choice : overleg nodig
+    proposed_choice --> accepted : akkoord
+    proposed_choice --> rejected : geen akkoord
+    accepted --> superseded : nieuwe beslissing / verouderd
+    rejected --> [*]
+    superseded --> [*]
+```
+
+Zoals eerder gezegd, wordt een ADR dus nooit verwijderd of aangepast. Het enige wat in een ADR kan veranderen nadat deze voorbij de proposal fase is, is de status. Ook is het zeer belangrijk om de rejected ADR's te behouden. Deze geven namelijk een goed beeld van de afwegingen die zijn gemaakt. Misschien is er in de toekomst een reden om een beslissing die eerder is afgewezen toch te implementeren, of misschien is er een nieuwe technologie die het mogelijk maakt om een beslissing die eerder is geaccepteerd te vervangen door een betere beslissing. Door de geschiedenis van onze beslissingen te behouden, kunnen we beter geïnformeerde keuzes maken in de toekomst.
+
+### 9. Casus - Two Many Sneakers
+We kijken terug naar de casus van Two Many Sneakers van het vorige hoofdstuk.
+:::info[Opfrissing]
+Two Many Sneakers is een bedrijf met een succesvolle mobiele app voor schoenenverzamelaars, waarmee gebruikers sneakers kunnen kopen, verkopen en ruilen.
+
+De oorspronkelijke architectuur was eenvoudig:mobile app → trading service → database. Door de groei van het platform ontstonden nieuwe noden zoals real-time notificaties, analytics/fraudedetectie en betere schaalbaarheid.
+
+Daarom werd de architectuur uitgebreid met extra services (zoals notifications en analytics) en onderzocht het team asynchrone communicatie via message queues/topics om de koppeling te verlagen en het systeem uitbreidbaar te maken.
+:::
+
+Een ADR van de beslissing voor asynchrone communicatie via message queues zou er als volgt kunnen uitzien:
+
+<CodeBlock language="markdown" className="wrapCode">
+{`#### title
+012: gebruik van queues voor asynchrone messaging vanaf tradingdienst
+
+#### status
+accepted
+
+#### context
+De trading service moet andere diensten (voorlopig: analytics en notifications) op de hoogte brengen van nieuwe producten en van elke verkoop. We hebben twee opties overwogen:
+1. Web services (REST API calls): de trading service roept direct de API's van andere services aan
+2. Asynchrone messaging (queues of topics): de trading service publiceert berichten naar een bus
+
+Karakteristieken die meespelen: scalability (pieken in gebruik), fault tolerance (services mogen niet afhankelijk zijn van elkaar), extensibility (in de toekomst komen er meer services bij).
+
+#### decision
+We zullen message queues gebruiken. Queues maken het systeem veelzijdig, aangezien elke queue andere soorten berichten kan afleveren aan verschillende consumers. Ze maken het systeem ook veiliger, aangezien de trading service steeds weet welke queue voor welke service bedoeld is. De trading service hanteert het "fire and forget" principe: berichten worden naar de queues gestuurd zonder te wachten op bevestiging, waardoor de trading service niet vertraagd wordt.
+
+#### consequences
+(+) De koppeling tussen de trading service en consumer-services is losser. Als een consumer-service uitvalt, blijven de berichten in de queue staan tot de service weer online is.
+(+) We kunnen eenvoudig nieuwe consumer-services toevoegen zonder de trading service aan te passen (zolang ze bestaande berichtformaten gebruiken).
+(-) De koppeling tussen de trading service en de queues zelf is hoger: elke nieuwe queue moet expliciet ondersteund worden door de trading service.
+(-) We moeten infrastructuur voor de queues voorzien (RabbitMQ, monitoring, backups).
+
+(werk): We moeten berichtformaten (schemas) documenteren en versioneren.
+
+#### governance
+- Alle developers worden getraind in het gebruik van RabbitMQ.
+- Nieuwe services die berichten van de trading service nodig hebben, moeten een ADR schrijven voor de benodigde queue.
+- Code reviews controleren of berichten correct gepubliceerd worden naar de juiste queues.
+
+#### notes
+ Zie ook ADR 008 (keuze voor RabbitMQ als message broker). In de toekomst kunnen we overwegen om over te stappen op een centraal topic, maar dit vereist meer security maatregelen.`}
+</CodeBlock>
+:::info[tip]
+ADR is een concept waar je zeer uitgebreid in kan gaan. Binnen deze cursus gaan we er niet dieper op in , maar extra informatie, tools, templates en best practices kan je [hier](https://adr.github.io/) vinden.
+:::
+
+### 10. Logische componenten
+We hebben onze karakteristieken gekozen en onze architecturale beslissingen gemaakt, nu komen we aan de derde dimensie van software architectuur: de logische componenten. 
+
+Logische componenten zijn de **bouwstenen** van een systeem. Je kan ze vergelijken met de kamers in een huis: elke kamer heeft een specifieke functie (slaapkamer, keuken, badkamer, woonkamer) en er is een logische reden waarom bepaalde activiteiten in bepaalde kamers plaatsvinden.
+
+:::warning[Belangrijk]
+Logische componenten zijn geen fysieke componenten of code. Ze zijn dus **geen**:
+- microservices
+- docker containers
+- Controllers of modules in je code
+- klassen of functies 
+:::
+
+Enkele voorbeelden van logische componenten zijn:
+- Gebruikersbeheer
+- Productcatalogus
+- Bestellingen
+- Rapportage
+- Notificaties
+- Betalingsverwerking
+
+Logische componenten zijn een manier om de architectuur van een systeem te structureren.
+
+We gaan in de komende stappen kijken hoe we stap voor stap kunnen komen tot deze set van logische componenten. We gaan hierbij ook een voorbeeld gebruiken met de volgende casus:
+> We hebben een online veilingplatform waar gebruikers kunnen bieden op reizen. Er is een livestream van de veiling, en er is een fysieke locatie waar de veilingmeester de biedingen bijhoudt en reizen als verkocht markeert. Het systeem verwerkt ook betalingen en volgt biederactiviteit op.
+#### Stap 1: Initiële kerncomponenten
+We beginnen met het identificeren van de initiële kerncomponenten van ons systeem. Dit zijn de componenten die essentieel zijn voor de werking van het systeem en die direct gerelateerd zijn aan de belangrijkste functionaliteiten. Om deze te bepalen kunnen we gebruik maken van 2 technieken:
+
+##### Workflow
+Bij de workflow approach bekijken we het systeem vanuit het perspectief van de gebruiker. We doorlopen zo de conceptuele stappen van één typische user journey, één scenario van hoe een gebruiker het systeem zou kunnen gebruiken. Elke stap in die journey kan leiden tot een aparte logische component. Daarbij gelden drie richtlijnen:
+
+1. standaard hebben alle verschillende stappen elk hun eigen component
+2. Sterk verwante stappen kunnen samengevoegd worden in één component
+3. Complexe stappen kunnen opgesplitst worden in meerdere componenten
+
+Stel dus dat we de volgende workflow hebben voor "meedoen en winnen":
+```mermaid
+graph TB
+    A[Registreren voor de veiling] --> B[Aanmelden bij de start] --> C[Veiling bekijken] --> D[Bod plaatsen] --> E[Betalen]
+```
+Hier kunnen we dus 5 initiële componenten van maken die elk een stap in deze workflow vertegenwoordigen, bijvoorbeeld:
+
+| Stap | Initiële component |
+|---|---|
+| Registreren voor de veiling | `AuctionRegistration` |
+| Aanmelden bij de start | `LiveAuctionSession` |
+| Veiling bekijken (livestream) | `VideoStreamer` |
+| Bod plaatsen | `BidCapture` |
+| Betalen | `AutomaticPayment` |
+
+Dit is een eerste schets. In stap 2 kan blijken dat er extra requirements zijn die nog geen “thuis” hebben, waardoor er nieuwe componenten bijkomen.
+##### Actor/action
+De actor/action approach is handig als het systeem meerdere soorten gebruikers heeft. Je somt de belangrijkste handelingen per actor op en verbindt die handelingen met componenten. Je verbindt ook componenten onderling als ze van elkaar afhankelijk zijn.
+
+Naast menselijke actoren (gebruikers, beheerders, operators, ...) is er ook een "System" actor voor automatische acties die het systeem zelf uitvoert (bijvoorbeeld geplande taken, achtergrondprocessen).
+
+**Online veiling (met meerdere actoren):**
+We hebben drie actoren:
+- Kate (online bieder): zoekt een veiling, kijkt de livestream, plaatst een bod
+- Sam (veilingmeester ter plaatse): start de veiling, registreert biedingen van ter plaatse, markeert reizen als verkocht
+- System (automatisch): verwerkt betalingen, volgt biederactiviteit op
+
+Dit leidt tot de volgende toewijzing:
+
+| Actor | Actie | Component |
+|---|---|---|
+| Kate | Zoekt een veiling | `AuctionSearch` |
+| Kate | Bekijkt livestream | `VideoStreamer` |
+| Kate | Plaatst een bod (online) | `BidCapture` |
+| Sam | Start/beheert veiling | `LiveAuctionSession` |
+| Sam | Voert een live bod in (ter plaatse) | `BidCapture` |
+| Sam | Markeert reis als verkocht | `LiveAuctionSession` |
+| System | Verwerkt betaling automatisch | `AutomaticPayment` |
+| System | Volgt biederactiviteit op | `BidderTracker` |
+
+En de communicatie tussen componenten:
+- `BidCapture` stuurt biedingen door naar `BidderTracker` (voor analyse)
+- `LiveAuctionSession` vertelt `AutomaticPayment` wie er moet betalen
+- `LiveAuctionSession` stuurt start/stop signalen naar `BidderTracker`
+
+Merk op dat `BidCapture` door zowel Kate als Sam gebruikt wordt, het is een gedeeld component voor alle biedingen, ongeacht de bron.
+
+:::info[Combinatie van beiden]
+In de praktijk is het perfect mogelijk om beiden te combineren. Je kan bijvoorbeeld eerst de actoren en hun acties onderscheiden en vervolgens op deze verschillende acties de workflow benaderen. Zo krijg je een nog beter beeld van de verschillende componenten en hun onderlinge relaties.
+Dit is een optie, maar de exacte techniek die je gebruikt hangt af van het systeem
+:::
+##### Valkuil: de entity trap
+Een veelgemaakte fout is de entity trap: een component krijgt te veel verantwoordelijkheden, waardoor het onduidelijk is wat het precies doet. Dit risico is extra groot bij vage namen zoals "supervisor" of "manager". Deze namen zeggen niets over wat het component precies doet, waardoor het moeilijk is om te begrijpen wat de verantwoordelijkheden van het component zijn.
+
+
+Als een component zo'n vage naam heeft, stel jezelf dan de vraag: "Wat doet dit component precies?"
+
+Als het antwoord meer dan één duidelijke verantwoordelijkheid omvat, moet je het component opsplitsen. Bijvoorbeeld:
+
+`UserManager` die zowel authenticatie, profielbeheer als notificaties doet
+
+Dit zou dus beter worden opgesplitst in `Authentication`, `UserProfile` en `Notifications` als aparte componenten.
+
+
+#### Stap 2: Requirements toewijzen aan componenten
+Nu we onze initiële kerncomponenten hebben, kunnen we de requirements toewijzen aan deze componenten. Met de requirements bedoelen we in deze stap de functionele requirements.
+
+Het is goed mogelijk dat we hier merken dat we iets niet kunnen toewijzen aan een bepaalde component. Dit kan betekenen dat we een nieuwe component moeten toevoegen. 
+
+Stel dat we de volgende requirements hebben:
+- De huidige reis die wordt geveild tonen
+- Een reis markeren als verkocht en naar de volgende reis gaan
+- Elke online bod versturen naar de live veilingmeester zodra het wordt geplaatst zodat ze het kunnen noemen
+- De live video stream opnemen voor latere weergave in geval van een betwisting
+- Bieders toestaan details over de huidige reis te bekijken
+
+Dan kunnen we deze toewijzen aan onze componenten als volgt:
+| Requirement | Component |
+|---|---|
+| De huidige reis die wordt geveild tonen | `LiveAuctionSession` |
+| Een reis markeren als verkocht en naar de volgende reis gaan | `LiveAuctionSession` |
+| Elke online bod versturen naar de live veilingmeester zodra het wordt geplaatst zodat ze het kunnen noemen | `BidCapture` |
+| De live video stream opnemen voor latere weergave in geval van een betwisting | `VideoStreamer` |
+| Bieders toestaan details over de huidige reis te bekijken | `TripViewer` |
+
+:::info[merk op]
+We hebben hier een nieuwe component `TripViewer` toegevoegd omdat we geen van de bestaande componenten konden toewijzen aan deze requirement. Dit is een goed voorbeeld van hoe het toewijzen van requirements aan componenten kan leiden tot het identificeren van nieuwe componenten die we in eerste instantie misschien niet hadden gezien. Het ontstaan van nieuwe componenten noemen we **evolutie van de architectuur**
+:::
+
+#### Stap 3: Rol en verantwoordelijkheden analyseren
+Nu we een eerste set componenten hebben, kunnen we per component de vraag stellen: “Welke verantwoordelijkheden horen hier logisch thuis?”
+
+Dit is niet exact hetzelfde als “welke requirements hebben we net toegewezen?”: in deze stap check je of het takenpakket van elk component eenduidig is. Dat noemen we **cohesie**: hoe duidelijker en consistenter het takenpakket, hoe hoger de cohesie.
+
+Als één component meerdere taken heeft die inhoudelijk niet bij elkaar passen, is dat een signaal dat je misschien beter opsplitst (of taken herverdeelt), zodat elk component één duidelijke focus heeft.
+
+In ons veilingvoorbeeld kan je de verantwoordelijkheden bijvoorbeeld als volgt samenvatten:
+
+| Component | Typische verantwoordelijkheden |
+|---|---|
+| `LiveAuctionSession` | Huidige veiling/toestand beheren, reizen als verkocht markeren, door naar volgende reis |
+| `BidCapture` | Biedingen ontvangen/valideren, biedingen doorgeven aan veilingmeester, biedingen doorsturen voor analyse |
+| `VideoStreamer` | Livestream aanbieden en (indien nodig) een opname voorzien |
+| `TripViewer` | Details van de huidige reis tonen (foto’s, beschrijving) |
+| `AutomaticPayment` | Betaling opstarten en betalingsstatus opvolgen |
+| `BidderTracker` | Biederactiviteit opvolgen en analyseren |
+
+Merk op dat dit nog steeds een logische verdeling is: je beschrijft verantwoordelijkheden zonder te beslissen of dit later microservices, modules, of iets anders worden.
+
+Hier merken we bijvoorbeeld dat `VideoStreamer` zowel verantwoordelijk is voor het aanbieden van de livestream als voor het opnemen ervan. Dat zijn twee verschillende verantwoordelijkheden die niet per se bij elkaar horen.
+
+Dit is ook iets dat je naarmate het systeem groeit opnieuw moet evalueren. Misschien was het in het begin logisch om deze twee verantwoordelijkheden in één component te hebben, maar naarmate de complexiteit stijgt kan het nodig zijn om deze verantwoordelijkheden op te splitsen.
+
+De keuze om een nieuwe component al dan niet toe te voegen kan ook beschouwd worden als een architecturale beslissing en is dus ook iets dat we kunnen bijhouden in een ADR.
+
+
+#### Stap 4: Architecturale karakteristieken analyseren
+Op dit moment zijn onze logische componenten gebaseerd op de requirements. Dit is geen probleem, want het is belangrijk om eerst te weten "wat" we moeten bouwen voor we gaan beslissen "hoe" we dat gaan bouwen. Maar nu we dit hebben vastgelegd gaan we toch ook daar eens naar kijken en dan komen we terug op die driving karakteristieken. Stel dat we de volgende driving karakteristieken hebben gekozen voor ons veilingplatform:
+| Karakteristiek | Beschrijving |
+|---|---|
+| Scalability | Het systeem moet kunnen omgaan met pieken in verkeer tijdens populaire veilingen |
+| availibility | Het systeem moet 24/7 beschikbaar zijn, vooral tijdens veilingen |
+| security | Gevoelige gebruikersdata en betalingsinformatie moeten goed beschermd zijn |
+
+Stel dat we even dieper gaan kijken naar Scalability. We hebben een component: `BidCapture` die verantwoordelijk is voor het ontvangen van biedingen en deze opslaan om ze vervolgens door te sturen naar de veilingmeester. Dit zou er dus zo uit kunnen zien:
+```mermaid
+graph LR
+    A[online bieder] --> B[BidCapture] --> C[Veilingmeester]
+    B --> D[(database)]
+```
+
+Dit werkt prima in het begin. Maar stel dat we tijdens een reeks populaire veilingen tot wel 10.000 biedingen per minuut krijgen. Dan zal `BidCapture` een bottleneck worden, want het moet al deze biedingen verwerken en opslaan, en de database kan maar een beperkt aantal schrijfbewerkingen per seconde aan. Dit is een probleem voor onze scalability.
+
+Als we kijken naar de exacte reden waarom deze biedingen moeten worden opgeslagen, is dat vooral voor latere analyse en rapportage. De biedingen moeten dus wel direct naar de veilingmeester worden gestuurd, maar hoeven niet per se direct in de database te worden opgeslagen.
+
+Wat we hier dus zouden kunnen doen is asynchrone communicatie introduceren (message queues, topics, ...). `BidCapture` publiceert elk bod naar een queue, en `BidderTracker` verwerkt die berichten op eigen tempo: opslaan in de database en analyse.
+
+`BidCapture` kan daarbij enkel het hoogste bod (of de hoogste paar biedingen) in het werkgeheugen bijhouden, zodat de veiling zelf niet vertraagd wordt door database-operaties.
+
+```mermaid
+graph LR
+    A[online bieder] --> B[BidCapture] --> C[Veilingmeester]
+    B --> D[(message queue)]
+    D --> E[BidderTracker] --> F[(database)]
+```
+
+### 11. Interactie tussen componenten
+We hebben nu onze componenten. Maar we hebben nog niet beslist hoe deze componenten communiceren. Gaan alle componenten rechtstreeks met elkaar communiceren? Is er een centrale component die alle communicatie regelt? Wat is hier de beste keuze?
+
+Om dit te bepalen moeten we een paar stappen achteruit nemen. Een verbinding tussen twee componenten noemen we een koppeling. We hebben twee soorten koppelingen:
+#### Afferente koppeling
+Een afferente koppeling geeft aan hoeveel andere componenten afhankelijk zijn van dit component (inkomende afhankelijkheden). Dit drukken we uit met CA (afferent coupling).
+```mermaid
+graph LR
+    A[Component A] --> C[Component C]
+    B[Component B] --> C[Component C]
+```
+In dit voorbeeld heeft Component C een afferente koppeling van 2, want er zijn 2 componenten die afhankelijk zijn van Component C.
+#### Efferente koppeling
+Een efferente koppeling geeft aan van hoeveel andere componenten een component afhankelijk is. Van hoeveel componenten deze afhankelijk is drukken we uit met CE (efferent coupling).
+```mermaid
+graph LR
+    A[Component A] --> B[Component B]
+    A[Component A] --> C[Component C]
+```
+In dit voorbeeld heeft Component A een efferente koppeling van 2, want Component A is afhankelijk van 2 andere componenten (B en C).
+
+#### Koppeling meten
+Om nu de koppeling van een component te meten tellen we het aantal afferente koppelingen (CA) en het aantal efferente koppelingen (CE) bij elkaar op. Dit geeft ons CT (total coupling) voor die component.
+
+Om de totale koppeling van het systeem te meten tellen we de CT van alle componenten bij elkaar op. Hoe hoger deze totale koppeling, hoe meer afhankelijkheden er zijn tussen componenten, en hoe moeilijker het is om veranderingen door te voeren zonder dat dit impact heeft op andere componenten.
+
+### 12. Wet van Demeter
+De wet van Demeter, ook wel bekend als "principle of least knowledge", is een richtlijn binnen software architectuur om de koppeling tussen componenten te beperken.
+De wet stelt het volgende:
+- Elke component mag slechts beperkte kennis hebben van andere componenten: alleen van componenten die directe buren zijn.
+- Elke component mag alleen met zijn directe “vrienden” communiceren, niet met onbekenden.
+- Praat alleen met directe vrienden, niet met vrienden van vrienden.
+
+Stel dat we dit toepassen op het volgende voorbeeld:
+```mermaid
+graph LR
+    U[User] -->|place an order| A[Order placement]
+    subgraph System
+        A -->|decrement inventory| B[Inventory Management]
+        A -->|stock low?| C[Supplier ordering]
+        A -->|send confirmation| D[Email Notification]
+        A -->|stock low? raise the price| E[Item pricing]
+    end
+```
+
+Bereken hier de CT van elke component en het systeem:
+<details>
+<summary>Antwoord</summary>
+
+| Component | CA | CE | CT |
+|---|---|---|---|
+| Order placement | 1 (User) | 4 (Inventory Management, Supplier ordering, Email Notification, Item pricing) | 5 |
+| Inventory Management | 1 (Order placement) | 0 | 1 |
+| Supplier ordering | 1 (Order placement) | 0 | 1 |
+| Email Notification | 1 (Order placement) | 0 | 1 |
+| Item pricing | 1 (Order placement) | 0 | 1 |
+Totale koppeling van het systeem = 5 + 1 + 1 + 1 + 1 = 9
+</details>
+
+Merk op dat we hoge cohesie hebben binnen de componenten. Elke component heeft een duidelijke verantwoordelijkheid. Toch is de totale koppeling van de component `Order Placement` erg hoog ten opzichte van de andere componenten. In dit voorbeeld betekent dit vooral dat `Order Placement` van veel andere componenten afhankelijk is (hoge CE). Als één van die componenten verandert (interface, gedrag, timing, …), kan dat een aanpassing in `Order Placement` vereisen. Dit maakt wijzigingen lastiger en verhoogt het risico op een kettingreactie in de implementatie.
+
+Volgens de wet van Demeter moet Order placement zo weinig mogelijk kennis hebben van andere componenten. In dit voorbeeld heeft Order placement te veel kennis van andere componenten, wat leidt tot een hoge koppeling. Stel dat we dit aanpassen naar het volgende
+```mermaid
+graph LR
+    U[User] -->|place an order| A[Order placement]
+    subgraph System
+        A -->|decrement inventory| B[Inventory Management]
+        B -->|stock low?| C[Supplier ordering]
+        A -->|send confirmation| D[Email Notification]
+        B -->|stock low? raise the price| E[Item pricing]
+    end
+```
+Hoeveel bedraagt de totale koppeling van het systeem nu?
+<details>
+<summary>Antwoord</summary>
+
+| Component | CA | CE | CT |
+|---|---|---|---|
+| Order placement | 1 (User) | 2 (Inventory Management, Email Notification) | 3 |
+| Inventory Management | 1 (Order placement) | 2 (Supplier ordering, Item pricing) | 3 |
+| Supplier ordering | 1 (Inventory Management) | 0 | 1 |
+| Email Notification | 1 (Order placement) | 0 | 1 |
+| Item pricing | 1 (Inventory Management) | 0 | 1 |
+Totale koppeling van het systeem = 3 + 3 + 1 + 1 + 1 = 9
+</details>
+
+We zien dus dat we eigenlijk, ondanks we de koppeling van `Order Placement` hebben verlaagd, de totale koppeling van het systeem niet hebben verlaagd. Dit komt omdat we de koppeling hebben verschoven van `Order Placement` naar `Inventory Management`. De koppeling van het hele systeem is dus niet het enige waar we naar moeten kijken, maar we moeten kijken naar de standaarddeviatie. Hier bestaat een formule voor die je o.a. [hier](https://nl.wikipedia.org/wiki/Standaardafwijking) kan vinden, maar dit is iets dat je ook perfect met een online tool kan berekenen. Het komt er eigenlijk op neer dat we gaan bekijken hoeveel een koppeling afwijkt van het gemiddelde van de koppelingen. Hoe hoger deze afwijking, hoe meer we afwijken van de wet van Demeter. In ons eerste voorbeeld hadden we een hoge afwijking, omdat `Order Placement` een veel hogere koppeling had dan de andere componenten. In het tweede voorbeeld hebben we deze afwijking verlaagd, omdat we de koppeling meer gelijkmatig hebben verdeeld over `Order Placement` en `Inventory Management`.
+
+:::warning[Let op]
+Hoewel de wet van Demeter en CA, CE, CT en standaarddeviatie belangrijk zijn, is het ook belangrijk om te zorgen dat het geen number game wordt. Stel dat we bijvoorbeeld gebruik maken van een topic:
+```mermaid
+graph TB
+    U[User] -->|place an order| A[Order placement]
+    subgraph System
+        A[Order placement] -->|publish order| B[Topic]
+        B -->|decrement inventory| C[Inventory Management]
+        B -->|stock low?| D[Supplier ordering]
+        B -->|send confirmation| E[Email Notification]
+        B -->|stock low? raise the price| F[Item pricing]
+
+    end
+```
+In dit voorbeeld heeft topic een zeer hoge koppeling. Daarnaast is er ook een hoge standaarddeviatie, maar het is daarom niet noodzakelijk fout. Door juist de beslissing te maken om een gestandaardiseerde communicatie via een topic te gebruiken, kunnen we de koppeling van alle andere componenten verlagen. Het is dus belangrijk om altijd te kijken naar de context van de koppeling en niet alleen naar de cijfers. In dit voorbeeld is het logisch dat topic een hoge koppeling heeft, omdat het de centrale communicatiehub is voor alle componenten. Het is ook belangrijk om te kijken naar de voordelen die deze hoge koppeling met zich meebrengt, zoals flexibiliteit en schaalbaarheid, in plaats van alleen te focussen op het verlagen van de koppeling.
+:::

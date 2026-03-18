@@ -1,0 +1,104 @@
+---
+id: ict-arch-lab-3
+title: 'Labo 3: Traefik in Docker Swarm'
+sidebar_label: 'Labo 3: Traefik in Docker Swarm'
+---
+In dit labo gaan we starten met het opzetten van een cluster die we voor de komende labo's zullen gebruiken. In dit labo focussen we op het opzetten van traefik als reverse proxy in Docker Swarm.
+
+### Benodigdheden 
+Voor dit labo maken we gebruik van 2 machines, genaamd `ict-arch-ubuntu-1` en `ict-arch-ubuntu-2`. Op beide machines moet Docker geïnstalleerd zijn. Deze machines kan je hergebruiken van het vorige labo. 
+Het is belangrijk dat de machines en statisch IP-adres hebben. Anders loop je het risico dat de cluster niet meer werkt als je een machine herstart, omdat deze een nieuw IP-adres krijgt. In dit labo gebruiken we de volgende IP-adressen:
+| Machine | IP-adres |
+| --- | --- |
+| ict-arch-ubuntu-1 | 192.168.130.170 |
+| ict-arch-ubuntu-2 | 192.168.130.171 |
+
+```mermaid
+graph LR
+    A[ict-arch-ubuntu-1] --- VMNet
+    VMNet --- B[ict-arch-ubuntu-2]
+```
+:::warning[belangrijk]
+Voor dit labo gaan we ervan uit dat je al een cluster hebt opgezet met Docker Swarm. Als dit niet het geval is, kan je de stappen volgen in het vorige labo om een cluster op te zetten.
+:::
+### 1. Basis voor traefik vanuit docker compose 
+maak een map `labo-2` aan op de manager-node (`ict-arch-ubuntu-1`) en maak een bestand `compose.yml`aan. We vertrekken van een basisconfiguratie zoals we die kennen van Docker Compose:
+```yaml title="compose.yml"
+services:
+    traefik:
+        image: traefik:3.6.4
+        ports:
+            - "80:80"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ./traefik.yml:/etc/traefik/traefik.yml:ro
+```
+We maken hier gebruik van de officiële Traefik image.
+:::warning[Belangrijk]
+In deze configuratie maken we gebruik van `traefik:3.6.4`. Dit is belangrijk omdat bepaalde oudere versies van Traefik niet goed werken in Docker Swarm. Zorg ervoor dat je deze versie gebruikt om problemen te voorkomen.
+:::
+We moeten ook nog een configuratiebestand `traefik.yml` aanmaken in dezelfde map. Hierin zetten we de basisconfiguratie voor Traefik. Deze nemen we ook over van de versie voor Docker Compose:
+```yaml title="traefik.yml"
+entryPoints:
+    web:
+        address: ":80"
+
+providers:
+    docker:
+        endpoint: "unix:///var/run/docker.sock"
+        exposedByDefault: false
+```
+### 2. Compose file omzetten voor Docker Swarm
+Nu we een basisconfiguratie hebben, moeten we deze nog aanpassen zodat we deze kunnen gebruiken in Docker Swarm. We starten met de aanpassing van `traefik.yml`. 
+We moeten de provider `docker` vervangen door `swarm`. 
+```yaml title="ict-traefik.yml"
+entryPoints:
+    web:
+        address: ":80"
+providers:
+// highlight-next-line
+    swarm:
+        endpoint: "unix:///var/run/docker.sock"
+        exposedByDefault: false
+```
+Door hier `swarm`te gebruiken zal Traefik de labels lezen die we toevoegen aan services, in plaats van aan containers. Aangezien docker swarm services beheert en niet individuele containers, kunnen we geen labels toevoegen aan containers, maar wel aan services. 
+
+Nu moeten we ook nog de `compose.yml` aanpassen. We moeten hier een aantal extra parameters toevoegen zodat deze geschikt is voor Docker Swarm.
+We beginnen met het toevoegen van de `deploy` sectie. Voorlopig geven we hier alleen aan dat we 1 replica willen van de Traefik service. We zullen hier later nog extra parameters aan toevoegen.
+```yaml title="ict-arch-ubuntu-1 | compose.yml"
+services:
+    traefik:
+        image: traefik:3.6.4
+        ports:
+            - "80:80"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+            - ./traefik.yml:/etc/traefik/traefik.yml:ro
+// highlight-start
+        deploy:
+            replicas: 1
+// highlight-end
+```
+
+Wanneer je dit uitvoert, zal je merken dat je een foutmelding krijgt omdat docker swarm de `traefik.yml` niet kan vinden. Dit komt doordat Docker Swarm niet kan werken met relatieve paden voor volumes. We moeten hier een andere oplossing voor vinden. We kunnen hiervoor gebruik maken van Docker Swarm configs. Hiermee kunnen we een config aanmaken in Docker Swarm en deze vervolgens mounten in de container. We moeten hiervoor de `compose.yml` aanpassen:
+```yaml title="ict-arch-ubuntu-1 | compose.yml"
+services:
+    traefik:
+        image: traefik:3.6.4
+        ports:
+            - "80:80"
+        volumes:
+            - /var/run/docker.sock:/var/run/docker.sock:ro
+        deploy:
+            replicas: 1
+// highlight-start
+        configs:
+            - source: traefik-config
+              target: /etc/traefik/traefik.yml
+// highlight-end
+
+configs:
+    traefik-config:
+        file: ./traefik.yml
+```
+Hiermee maken we een config aan in Docker Swarm met de naam `traefik-config` en geven we aan dat deze config het bestand `traefik.yml` bevat. We geven ook aan dat deze config gemount moet worden in de container op de locatie `/etc/traefik/traefik.yml`. 

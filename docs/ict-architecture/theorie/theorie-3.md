@@ -348,3 +348,9 @@ flowchart LR
 In dit geval hoeven we geen aparte queues te beheren. Wanneer er een nieuwe service wordt toegevoegd, hoeft de trading service niet aangepast te worden (op voorwaarde dat de nieuwe service gebruik maakt van bestaande berichten). De nieuwe service kan zich gewoon abonneren op het centrale topic en de relevante berichten ontvangen. Dit zorgt voor een nog flexibelere en schaalbare architectuur.
 :::warning[belangrijk]
 Zoals je ziet is in deze casus de ideale  oplossing om een topic te gebruiken. Echter voegt dit ook heel wat extra compexiteit toe, vooral op vlak van security. In een topic moeten we ervoor zorgen dat alleen de juiste services toegang hebben tot de juiste berichten. Dit kan leiden tot extra werk en onderhoud. In sommige gevallen kan het dus nog steeds beter zijn om aparte queues te gebruiken, afhankelijk van de specifieke behoeften en beperkingen van het systeem.
+:::
+### 11. Eerste wet van software architectuur
+De eerste wet van software architectuur is: 
+> **Everything is a trade-off**
+
+Zoals we hebben gezien bij elke keuze de we maken bij het ontwerpen van software, zijn er altijd voor- en nadelen. Als we meer security willen, moeten we misschien inleveren op gebruiksgemak. Als we meer schaalbaarheid willen, moeten we misschien inleveren op eenvoud. Het is belangrijk om deze trade-offs te begrijpen en te overwegen bij het maken van architecturale beslissingen, zodat we een weloverwogen keuze kunnen maken die past bij de behoeften van het systeem en het team.

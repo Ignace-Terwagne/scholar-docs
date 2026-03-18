@@ -279,6 +279,8 @@ Enkele voorbeelden van logische componenten zijn:
 
 Logische componenten zijn een manier om de architectuur van een systeem te structureren.
 
+We gaan in de komende stappen kijken hoe we stap voor stap kunnen komen tot deze set van logische componenten. We gaan hierbij ook een voorbeeld gebruiken met de volgende casus:
+> We hebben een online veilingplatform waar gebruikers kunnen bieden op reizen. Er is een livestream van de veiling, en er is een fysieke locatie waar de veilingmeester de biedingen bijhoudt en reizen als verkocht markeert. Het systeem verwerkt ook betalingen en volgt biederactiviteit op.
 #### Stap 1: Initiële kerncomponenten
 We beginnen met het identificeren van de initiële kerncomponenten van ons systeem. Dit zijn de componenten die essentieel zijn voor de werking van het systeem en die direct gerelateerd zijn aan de belangrijkste functionaliteiten. Om deze te bepalen kunnen we gebruik maken van 2 technieken:
 
@@ -294,18 +296,26 @@ Stel dus dat we de volgende workflow hebben voor "meedoen en winnen":
 graph TB
     A[Registreren voor de veiling] --> B[Aanmelden bij de start] --> C[Veiling bekijken] --> D[Bod plaatsen] --> E[Betalen]
 ```
-Hier kunnen we dus 5 componenten van maken die elk een stap in deze workflow 
+Hier kunnen we dus 5 initiële componenten van maken die elk een stap in deze workflow vertegenwoordigen, bijvoorbeeld:
+
+| Stap | Initiële component |
+|---|---|
+| Registreren voor de veiling | `AuctionRegistration` |
+| Aanmelden bij de start | `LiveAuctionSession` |
+| Veiling bekijken (livestream) | `VideoStreamer` |
+| Bod plaatsen | `BidCapture` |
+| Betalen | `AutomaticPayment` |
+
+Dit is een eerste schets. In stap 2 kan blijken dat er extra requirements zijn die nog geen “thuis” hebben, waardoor er nieuwe componenten bijkomen.
 ##### Actor/action
 De actor/action approach is handig als het systeem meerdere soorten gebruikers heeft. Je somt de belangrijkste handelingen per actor op en verbindt die handelingen met componenten. Je verbindt ook componenten onderling als ze van elkaar afhankelijk zijn.
 
 Naast menselijke actoren (gebruikers, beheerders, operators, ...) is er ook een "System" actor voor automatische acties die het systeem zelf uitvoert (bijvoorbeeld geplande taken, achtergrondprocessen).
 
 **Online veiling (met meerdere actoren):**
-> We hebben een online veilingplatform waar gebruikers kunnen bieden op items. Er is een livestream van de veiling, en er is een fysieke locatie waar de veilingmeester de biedingen bijhoudt en items als verkocht markeert. Het systeem verwerkt ook betalingen en volgt biederactiviteit op.
-
 We hebben drie actoren:
 - Kate (online bieder): zoekt een veiling, kijkt de livestream, plaatst een bod
-- Sam (veilingmeester ter plaatse): start de veiling, registreert biedingen van ter plaatse, markeert items als verkocht
+- Sam (veilingmeester ter plaatse): start de veiling, registreert biedingen van ter plaatse, markeert reizen als verkocht
 - System (automatisch): verwerkt betalingen, volgt biederactiviteit op
 
 Dit leidt tot de volgende toewijzing:
@@ -317,7 +327,7 @@ Dit leidt tot de volgende toewijzing:
 | Kate | Plaatst een bod (online) | `BidCapture` |
 | Sam | Start/beheert veiling | `LiveAuctionSession` |
 | Sam | Voert een live bod in (ter plaatse) | `BidCapture` |
-| Sam | Markeert item als verkocht | `LiveAuctionSession` |
+| Sam | Markeert reis als verkocht | `LiveAuctionSession` |
 | System | Verwerkt betaling automatisch | `AutomaticPayment` |
 | System | Volgt biederactiviteit op | `BidderTracker` |
 
@@ -345,3 +355,189 @@ Als het antwoord meer dan één duidelijke verantwoordelijkheid omvat, moet je h
 Dit zou dus beter worden opgesplitst in `Authentication`, `UserProfile` en `Notifications` als aparte componenten.
 
 
+#### Stap 2: Requirements toewijzen aan componenten
+Nu we onze initiële kerncomponenten hebben, kunnen we de requirements toewijzen aan deze componenten. Met de requirements bedoelen we in deze stap de functionele requirements.
+
+Het is goed mogelijk dat we hier merken dat we iets niet kunnen toewijzen aan een bepaalde component. Dit kan betekenen dat we een nieuwe component moeten toevoegen. 
+
+Stel dat we de volgende requirements hebben:
+- De huidige reis die wordt geveild tonen
+- Een reis markeren als verkocht en naar de volgende reis gaan
+- Elke online bod versturen naar de live veilingmeester zodra het wordt geplaatst zodat ze het kunnen noemen
+- De live video stream opnemen voor latere weergave in geval van een betwisting
+- Bieders toestaan details over de huidige reis te bekijken
+
+Dan kunnen we deze toewijzen aan onze componenten als volgt:
+| Requirement | Component |
+|---|---|
+| De huidige reis die wordt geveild tonen | `LiveAuctionSession` |
+| Een reis markeren als verkocht en naar de volgende reis gaan | `LiveAuctionSession` |
+| Elke online bod versturen naar de live veilingmeester zodra het wordt geplaatst zodat ze het kunnen noemen | `BidCapture` |
+| De live video stream opnemen voor latere weergave in geval van een betwisting | `VideoStreamer` |
+| Bieders toestaan details over de huidige reis te bekijken | `TripViewer` |
+
+:::info[merk op]
+We hebben hier een nieuwe component `TripViewer` toegevoegd omdat we geen van de bestaande componenten konden toewijzen aan deze requirement. Dit is een goed voorbeeld van hoe het toewijzen van requirements aan componenten kan leiden tot het identificeren van nieuwe componenten die we in eerste instantie misschien niet hadden gezien. Het ontstaan van nieuwe componenten noemen we **evolutie van de architectuur**
+:::
+
+#### Stap 3: Rol en verantwoordelijkheden analyseren
+Nu we een eerste set componenten hebben, kunnen we per component de vraag stellen: “Welke verantwoordelijkheden horen hier logisch thuis?”
+
+Dit is niet exact hetzelfde als “welke requirements hebben we net toegewezen?”: in deze stap check je of het takenpakket van elk component eenduidig is. Dat noemen we **cohesie**: hoe duidelijker en consistenter het takenpakket, hoe hoger de cohesie.
+
+Als één component meerdere taken heeft die inhoudelijk niet bij elkaar passen, is dat een signaal dat je misschien beter opsplitst (of taken herverdeelt), zodat elk component één duidelijke focus heeft.
+
+In ons veilingvoorbeeld kan je de verantwoordelijkheden bijvoorbeeld als volgt samenvatten:
+
+| Component | Typische verantwoordelijkheden |
+|---|---|
+| `LiveAuctionSession` | Huidige veiling/toestand beheren, reizen als verkocht markeren, door naar volgende reis |
+| `BidCapture` | Biedingen ontvangen/valideren, biedingen doorgeven aan veilingmeester, biedingen doorsturen voor analyse |
+| `VideoStreamer` | Livestream aanbieden en (indien nodig) een opname voorzien |
+| `TripViewer` | Details van de huidige reis tonen (foto’s, beschrijving) |
+| `AutomaticPayment` | Betaling opstarten en betalingsstatus opvolgen |
+| `BidderTracker` | Biederactiviteit opvolgen en analyseren |
+
+Merk op dat dit nog steeds een logische verdeling is: je beschrijft verantwoordelijkheden zonder te beslissen of dit later microservices, modules, of iets anders worden.
+
+Hier merken we bijvoorbeeld dat `VideoStreamer` zowel verantwoordelijk is voor het aanbieden van de livestream als voor het opnemen ervan. Dat zijn twee verschillende verantwoordelijkheden die niet per se bij elkaar horen.
+
+Dit is ook iets dat je naarmate het systeem groeit opnieuw moet evalueren. Misschien was het in het begin logisch om deze twee verantwoordelijkheden in één component te hebben, maar naarmate de complexiteit stijgt kan het nodig zijn om deze verantwoordelijkheden op te splitsen.
+
+De keuze om een nieuwe component al dan niet toe te voegen kan ook beschouwd worden als een architecturale beslissing en is dus ook iets dat we kunnen bijhouden in een ADR.
+
+
+#### Stap 4: Architecturale karakteristieken analyseren
+Op dit moment zijn onze logische componenten gebaseerd op de requirements. Dit is geen probleem, want het is belangrijk om eerst te weten "wat" we moeten bouwen voor we gaan beslissen "hoe" we dat gaan bouwen. Maar nu we dit hebben vastgelegd gaan we toch ook daar eens naar kijken en dan komen we terug op die driving karakteristieken. Stel dat we de volgende driving karakteristieken hebben gekozen voor ons veilingplatform:
+| Karakteristiek | Beschrijving |
+|---|---|
+| Scalability | Het systeem moet kunnen omgaan met pieken in verkeer tijdens populaire veilingen |
+| availibility | Het systeem moet 24/7 beschikbaar zijn, vooral tijdens veilingen |
+| security | Gevoelige gebruikersdata en betalingsinformatie moeten goed beschermd zijn |
+
+Stel dat we even dieper gaan kijken naar Scalability. We hebben een component: `BidCapture` die verantwoordelijk is voor het ontvangen van biedingen en deze opslaan om ze vervolgens door te sturen naar de veilingmeester. Dit zou er dus zo uit kunnen zien:
+```mermaid
+graph LR
+    A[online bieder] --> B[BidCapture] --> C[Veilingmeester]
+    B --> D[(database)]
+```
+
+Dit werkt prima in het begin. Maar stel dat we tijdens een reeks populaire veilingen tot wel 10.000 biedingen per minuut krijgen. Dan zal `BidCapture` een bottleneck worden, want het moet al deze biedingen verwerken en opslaan, en de database kan maar een beperkt aantal schrijfbewerkingen per seconde aan. Dit is een probleem voor onze scalability.
+
+Als we kijken naar de exacte reden waarom deze biedingen moeten worden opgeslagen, is dat vooral voor latere analyse en rapportage. De biedingen moeten dus wel direct naar de veilingmeester worden gestuurd, maar hoeven niet per se direct in de database te worden opgeslagen.
+
+Wat we hier dus zouden kunnen doen is asynchrone communicatie introduceren (message queues, topics, ...). `BidCapture` publiceert elk bod naar een queue, en `BidderTracker` verwerkt die berichten op eigen tempo: opslaan in de database en analyse.
+
+`BidCapture` kan daarbij enkel het hoogste bod (of de hoogste paar biedingen) in het werkgeheugen bijhouden, zodat de veiling zelf niet vertraagd wordt door database-operaties.
+
+```mermaid
+graph LR
+    A[online bieder] --> B[BidCapture] --> C[Veilingmeester]
+    B --> D[(message queue)]
+    D --> E[BidderTracker] --> F[(database)]
+```
+
+### 11. Interactie tussen componenten
+We hebben nu onze componenten. Maar we hebben nog niet beslist hoe deze componenten communiceren. Gaan alle componenten rechtstreeks met elkaar communiceren? Is er een centrale component die alle communicatie regelt? Wat is hier de beste keuze?
+
+Om dit te bepalen moeten we een paar stappen achteruit nemen. Een verbinding tussen twee componenten noemen we een koppeling. We hebben twee soorten koppelingen:
+#### Afferente koppeling
+Een afferente koppeling geeft aan hoeveel andere componenten afhankelijk zijn van dit component (inkomende afhankelijkheden). Dit drukken we uit met CA (afferent coupling).
+```mermaid
+graph LR
+    A[Component A] --> C[Component C]
+    B[Component B] --> C[Component C]
+```
+In dit voorbeeld heeft Component C een afferente koppeling van 2, want er zijn 2 componenten die afhankelijk zijn van Component C.
+#### Efferente koppeling
+Een efferente koppeling geeft aan van hoeveel andere componenten een component afhankelijk is. Van hoeveel componenten deze afhankelijk is drukken we uit met CE (efferent coupling).
+```mermaid
+graph LR
+    A[Component A] --> B[Component B]
+    A[Component A] --> C[Component C]
+```
+In dit voorbeeld heeft Component A een efferente koppeling van 2, want Component A is afhankelijk van 2 andere componenten (B en C).
+
+#### Koppeling meten
+Om nu de koppeling van een component te meten tellen we het aantal afferente koppelingen (CA) en het aantal efferente koppelingen (CE) bij elkaar op. Dit geeft ons CT (total coupling) voor die component.
+
+Om de totale koppeling van het systeem te meten tellen we de CT van alle componenten bij elkaar op. Hoe hoger deze totale koppeling, hoe meer afhankelijkheden er zijn tussen componenten, en hoe moeilijker het is om veranderingen door te voeren zonder dat dit impact heeft op andere componenten.
+
+### 12. Wet van Demeter
+De wet van Demeter, ook wel bekend als "principle of least knowledge", is een richtlijn binnen software architectuur om de koppeling tussen componenten te beperken.
+De wet stelt het volgende:
+- Elke component mag slechts beperkte kennis hebben van andere componenten: alleen van componenten die directe buren zijn.
+- Elke component mag alleen met zijn directe “vrienden” communiceren, niet met onbekenden.
+- Praat alleen met directe vrienden, niet met vrienden van vrienden.
+
+Stel dat we dit toepassen op het volgende voorbeeld:
+```mermaid
+graph LR
+    U[User] -->|place an order| A[Order placement]
+    subgraph System
+        A -->|decrement inventory| B[Inventory Management]
+        A -->|stock low?| C[Supplier ordering]
+        A -->|send confirmation| D[Email Notification]
+        A -->|stock low? raise the price| E[Item pricing]
+    end
+```
+
+Bereken hier de CT van elke component en het systeem:
+<details>
+<summary>Antwoord</summary>
+
+| Component | CA | CE | CT |
+|---|---|---|---|
+| Order placement | 1 (User) | 4 (Inventory Management, Supplier ordering, Email Notification, Item pricing) | 5 |
+| Inventory Management | 1 (Order placement) | 0 | 1 |
+| Supplier ordering | 1 (Order placement) | 0 | 1 |
+| Email Notification | 1 (Order placement) | 0 | 1 |
+| Item pricing | 1 (Order placement) | 0 | 1 |
+Totale koppeling van het systeem = 5 + 1 + 1 + 1 + 1 = 9
+</details>
+
+Merk op dat we hoge cohesie hebben binnen de componenten. Elke component heeft een duidelijke verantwoordelijkheid. Toch is de totale koppeling van de component `Order Placement` erg hoog ten opzichte van de andere componenten. In dit voorbeeld betekent dit vooral dat `Order Placement` van veel andere componenten afhankelijk is (hoge CE). Als één van die componenten verandert (interface, gedrag, timing, …), kan dat een aanpassing in `Order Placement` vereisen. Dit maakt wijzigingen lastiger en verhoogt het risico op een kettingreactie in de implementatie.
+
+Volgens de wet van Demeter moet Order placement zo weinig mogelijk kennis hebben van andere componenten. In dit voorbeeld heeft Order placement te veel kennis van andere componenten, wat leidt tot een hoge koppeling. Stel dat we dit aanpassen naar het volgende
+```mermaid
+graph LR
+    U[User] -->|place an order| A[Order placement]
+    subgraph System
+        A -->|decrement inventory| B[Inventory Management]
+        B -->|stock low?| C[Supplier ordering]
+        A -->|send confirmation| D[Email Notification]
+        B -->|stock low? raise the price| E[Item pricing]
+    end
+```
+Hoeveel bedraagt de totale koppeling van het systeem nu?
+<details>
+<summary>Antwoord</summary>
+
+| Component | CA | CE | CT |
+|---|---|---|---|
+| Order placement | 1 (User) | 2 (Inventory Management, Email Notification) | 3 |
+| Inventory Management | 1 (Order placement) | 2 (Supplier ordering, Item pricing) | 3 |
+| Supplier ordering | 1 (Inventory Management) | 0 | 1 |
+| Email Notification | 1 (Order placement) | 0 | 1 |
+| Item pricing | 1 (Inventory Management) | 0 | 1 |
+Totale koppeling van het systeem = 3 + 3 + 1 + 1 + 1 = 9
+</details>
+
+We zien dus dat we eigenlijk, ondanks we de koppeling van `Order Placement` hebben verlaagd, de totale koppeling van het systeem niet hebben verlaagd. Dit komt omdat we de koppeling hebben verschoven van `Order Placement` naar `Inventory Management`. De koppeling van het hele systeem is dus niet het enige waar we naar moeten kijken, maar we moeten kijken naar de standaarddeviatie. Hier bestaat een formule voor die je o.a. [hier](https://nl.wikipedia.org/wiki/Standaardafwijking) kan vinden, maar dit is iets dat je ook perfect met een online tool kan berekenen. Het komt er eigenlijk op neer dat we gaan bekijken hoeveel een koppeling afwijkt van het gemiddelde van de koppelingen. Hoe hoger deze afwijking, hoe meer we afwijken van de wet van Demeter. In ons eerste voorbeeld hadden we een hoge afwijking, omdat `Order Placement` een veel hogere koppeling had dan de andere componenten. In het tweede voorbeeld hebben we deze afwijking verlaagd, omdat we de koppeling meer gelijkmatig hebben verdeeld over `Order Placement` en `Inventory Management`.
+
+:::warning[Let op]
+Hoewel de wet van Demeter en CA, CE, CT en standaarddeviatie belangrijk zijn, is het ook belangrijk om te zorgen dat het geen number game wordt. Stel dat we bijvoorbeeld gebruik maken van een topic:
+```mermaid
+graph TB
+    U[User] -->|place an order| A[Order placement]
+    subgraph System
+        A[Order placement] -->|publish order| B[Topic]
+        B -->|decrement inventory| C[Inventory Management]
+        B -->|stock low?| D[Supplier ordering]
+        B -->|send confirmation| E[Email Notification]
+        B -->|stock low? raise the price| F[Item pricing]
+
+    end
+```
+In dit voorbeeld heeft topic een zeer hoge koppeling. Daarnaast is er ook een hoge standaarddeviatie, maar het is daarom niet noodzakelijk fout. Door juist de beslissing te maken om een gestandaardiseerde communicatie via een topic te gebruiken, kunnen we de koppeling van alle andere componenten verlagen. Het is dus belangrijk om altijd te kijken naar de context van de koppeling en niet alleen naar de cijfers. In dit voorbeeld is het logisch dat topic een hoge koppeling heeft, omdat het de centrale communicatiehub is voor alle componenten. Het is ook belangrijk om te kijken naar de voordelen die deze hoge koppeling met zich meebrengt, zoals flexibiliteit en schaalbaarheid, in plaats van alleen te focussen op het verlagen van de koppeling.
+:::

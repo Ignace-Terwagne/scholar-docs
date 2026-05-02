@@ -1,0 +1,144 @@
+---
+id: ict-arch-theo-5
+title: 5. Gelaagde stijl en C4-model
+sidebar_label: 5. Gelaagde stijl en C4-model
+sidebar_position: 5
+---
+# Gelaagde stijl en C4-model
+In dit hoofdstuk gaan we een eerste architecturale stijl bespreken: de gelaagde stijl. We gaan daarnaast ook kijken naar het C4-model, een manier om software architectuur te visualiseren.
+
+### 1. Architecturale stijl
+Een architecturale stijl is een patroon of een set van richtlijnen die beschrijven hoe de componeten van een systeem georganiseerd zijn en hoe ze met elkaar communiceren. Er zijn verschillende architecturale stijlen, we zullen er enkele bespreken in de volgende hoofdstukken.
+
+We kunnnen om te beginnnen deze stijlen categoriseren op basis van de manier waarop ze uitgerold worden (deployment) en op de manier waarop de componenten gesplitst worden (partitionering).
+<div style={{ overflowX: 'auto' }}>
+	<table>
+		<thead>
+			<tr>
+				<th colSpan={2} />
+				<th colSpan={2} scope="colgroup" style={{ textAlign: 'center' }}>
+					Partitionering
+				</th>
+			</tr>
+			<tr>
+				<th colSpan={2} />
+				<th scope="col" style={{ textAlign: 'center' }}>Technisch</th>
+				<th scope="col" style={{ textAlign: 'center' }}>Op basis domein</th>
+			</tr>
+		</thead>
+		<tbody>
+			<tr>
+				<th rowSpan={2} scope="rowgroup" style={{ verticalAlign: 'middle' }}>
+					Deployment
+				</th>
+				<th scope="row" style={{ verticalAlign: 'middle' }}>Monolitisch</th>
+				<td>
+					<ul>
+						<li>gelaagd</li>
+						<li>microkernel</li>
+					</ul>
+				</td>
+				<td style={{ verticalAlign: 'middle' }}>
+                <ul>
+                <li>modulaire monoliet</li>
+                </ul>
+                </td>
+			</tr>
+			<tr>
+				<th scope="row" style={{ verticalAlign: 'middle' }}>Gedistribueerd</th>
+				<td style={{ verticalAlign: 'middle' }}>
+                <ul>
+                <li>event-driven</li>
+                </ul>
+                </td>
+				<td style={{ verticalAlign: 'middle' }}>
+                <ul>
+                <li>microservices</li>
+                </ul>
+                </td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+
+:::info[Monolitisch vs gedistribueerd]
+De term "monolitisch" gaan we nog een aantal keer tegenkomen. Monolitisch betekent dat alle componenten van een systeem in één enkele applicatie zijn verpakt. Je kan het bijvoorbeeld zijn als een backend waarin de API verantwoordelijk is voor alle functionaliteit. In een monolitische omgeving communiceren de verschillende componenten via function of method calls binnen dezelfde applicatie.
+
+Bij een gedistribueerd systeem zijn de componenten verdeeld over meerdere applicaties of services. Hier is het niet meer mogelijk om direct te communiceren via function of method calls. In plaats daarvan moeten de componenten communiceren via netwerkprotcollen zoals HTTP, gRPC, of message queues.
+:::
+
+### 2. Technische partitionering en op basis van domein
+Partitionering is de manier waarop we code organiseren binnen een systeem. We kunnen op verschillende manieren partitioneren, maar de twee meest voorkomende manieren zijn op basis van technische aspecten of op basis van domein.
+
+#### Technische partitionering
+We kunnen code organiseren op basis van technische aspecten. Voorbeelden hiervan zijn:
+- Presentatie
+- Businesslogica
+- Persistentie
+- ...
+
+#### partitionering op basis van domein
+We kunnen ook code organiseren op basis van domein. Hierbij organiseren we code op basis van de functionele domeinen van het systeem. Voorbeelden hiervan zijn:
+- Klanten
+- Bestellingen
+- Producten
+- ...
+
+#### combineren
+In de praktijk combineren we vaak beide vormen van partitionering. Echter is het wel belangrijk om de volgorde van partitionering te kiezen. De eerste partitionering noemen we de primaire partitionering, de tweede partitionering noemen we de secundaire partitionering. Deze termen zullen we later nog tegenkomen.
+
+Stel dat we beginnnen met een technische partitionering, en vervolgens opsplitsen op basis van domein. Dan zou onze structuur er als volgt uit kunnen zien:
+```
+src/
+├── presentation/
+│   ├── customers/
+│   ├── orders/
+│   └── products/
+├── services/
+│   ├── customers/
+│   ├── orders/
+│   └── products/
+└── persistence/
+    ├── customers/
+    ├── orders/
+    └── products/
+```
+Stel dat we beginnen met een domein-gebaseerde partitionering, en vervolgens opsplitsen op basis van technische aspecten. Dan zou onze structuur er als volgt uit kunnen zien:
+```
+src/
+├── customers/
+│   ├── presentation/
+│   ├── services/
+│   └── persistence/
+├── orders/
+│   ├── presentation/
+│   ├── services/
+│   └── persistence/
+└── products/
+    ├── presentation/
+    ├── services/
+    └── persistence/
+```
+
+Als we zouden werken met een zeer technisch gespecialeerd team (een frontend developer, een backend developer, een database administrator, ...) , kan het logisch zijn om te beginnen met een technische partitionering. Anderzijds , als we zouden werken met domein-experten (een klanten expert, een orders expert, een products expert, ...), kan het logischer zijn om te beginnen met een domein-gebaseerde partitionering.
+
+
+### 3. Gelaagde stijl
+De gelaagde stijl is een architecturale stijl waarbij er technisch wordt gepartitioneerd en er wordt gebruik gemaakt van een monolitische deployment. In deze stijl worden de componenten georganiseerd in lagen, waarbij elke laag een specifieke verantwoordelijkheid heeft. De lagen communiceren alleen met de lagen direct boven of onder hen.
+
+We gaan deze stijl bespreken aan de hand van een voorbeeld. Stel het volgende:
+
+*We gaan een project ontwikkelen voor een klein restaurant "Naan & Pop" dat snacks en drankjes  verkoopt. Ze zijn op zoek naar een nieuw systeem waar klanten bestellingen kunnen plaatsen. Aangezien het restaurant al bestaat en al zijn huidige kosten draagt, willen ze graag dat het systeem er zo snel mogelijk is (liever gisteren dan morgen). Daarom verwachten ze ook iets dat simpeler is, maar nog wel aanpasbaar is naar de toekomst toe.*
+
+*Ons team bestaat uit een deel specialisten, waaronder enkele frontend developers, backend developers en database administrators*
+
+Als we kijken naar de requirements van N&P komt het in de eerste plaats erop aan dat ze vooral zo snel mogelijk een manier moeten hebben om klanten een bestelling te laten plaatsen. Hiervoor bestaan reeds massa's van bestaande programma's of libraries die in enkele dagen opgezet zijn. Toch beslist ons team om hier niet voor te gaan, met de simpele reden dat een andere requirement wel is dat het uitbreidbaar moet zijn. Ons einddoel is niet om een simpele app te bouwen voor bestellingen, maar eerder om een basis te leggen voor de rest van de applicatie, waar we nog geen kennis van hebben.
+
+Tegelijk moeten we ook rekening houden dat we niet te complex gaan in onze uitwerking. N&P heeft geen speciale high-end architectuur nodig op dit moment. We zijn dus op zoek naar een goede balans tussen de twee. Ten slotte is er ook nog een derde onderdeel om rekening mee te houden: ons team bestaat uit mensen met een zeer gespecialiseerde kennis in hun onderdeel. We kunnen dus niet gewoon elke developer een bepaald domein geven (bv. het domein "planning"), want zij zouden niet alle technische aspecten hiervan kunnen uitwerken. Veel interessanter is dus om het technisch op te splitsen: Onze frontend developer voorziet alle frontend, onze backend developer alle backend en onze database administrator voorziet alles voor de database. 
+
+Dit is wat we noemen "splitsen van verantwoordelijkheden" (seperating responsibilities). Binnen de gelaagde stijl zien we hier een bekend patroon voor terugkomen, namelijk het **Model-View-Controller** patroon.
+
+#### Model - View - Controller (MVC)
+MVC is eeen design pattern dat zorgt voor logische splitsing in ons systeem.
+
+De model component is verantwoordelijk voor het beheren van de data en de businesslogica. 

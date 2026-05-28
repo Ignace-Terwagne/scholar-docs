@@ -203,25 +203,38 @@ In deze structuur hebben we eerst een technische partitionering gemaakt (present
 De gelaagde stijl is monolitisch, maar dit wilt niet zeggen dat alles in één enkele codebase moet zitten. De fysieke architectuur kan er op 3 manieren uitzien:
 **1. Alles in één codebase**
 ```mermaid
-subgraph systeem
-presentation --> workflow
-workflow --> persistence
-end
+graph TD
+    client --> presentation
+    subgraph systeem
+        presentation --> workflow
+        workflow --> persistence
+    end
+    persistence --> database
+
 ```
 Dit gebeurt bij kleine projecten of bij projecten waarbij de backend en frontend sterk met elkaar verweven zijn. We beschouwen de presentation laag zowel voor de frontend als voor de backend en in dit geval zouden deze vanuit dezelfde applicatie worden uitgerold. Dit is een zeer eenvoudige manier van werken, maar het kan ook snel leiden tot een spaghetti codebase als we niet goed opletten. We moeten er dus voor zorgen dat we de code goed organiseren en dat we de verantwoordelijkheden duidelijk scheiden.
 **2. presentation in aparte codebase**
 ```mermaid
-presentation --> workflow
-workflow --> persistence
+graph TD
+    client --> presentation
+     presentation --> workflow
+    subgraph systeem
+       
+        workflow --> persistence
+    end
+    persistence --> database
 ```
 In dit geval hebben we de presentation laag in een aparte codebase. Dit kan handig zijn als we een frontend hebben die volledig losstaat van de backend, bijvoorbeeld een mobiele app of een webapplicatie die gebruik maakt van een API. Het voordeel hiervan is dat we de frontend en backend volledig kunnen scheiden en dat we verschillende teams kunnen laten werken aan de frontend en backend. Het nadeel is dat we meer overhead hebben in het communiceren tussen de frontend en backend, omdat we nu moeten communiceren via netwerkprotocollen zoals HTTP of gRPC.
 **3. Alles in één codebase, inclusief database**
 ```mermaid
-subgraph systeem
-presentation --> workflow
-workflow --> persistence
-persistence --> database
-end
+graph TD
+    client --> presentation
+    subgraph systeem
+        presentation --> workflow
+        workflow --> persistence
+        persistence --> database
+    end
+
 ```
 Dit komt weinig voor, omdat het meestal niet wenselijk is om de database in de codebase van de applicatie zelf te hebben , maar we kunnen het concept van een database ook ruimer zien. We kunnen bijvoorbeeld ook denken aan een embedded database zoals SQLite, of zelfs gewoon een tekstbestand dat als database fungeert. In dit geval zou de database dus ook in dezelfde codebase zitten als de rest van de applicatie. Het voordeel hiervan is dat we alles in één codebase hebben en dat we geen overhead hebben in het communiceren tussen de applicatie en de database. Het nadeel is dat het minder flexibel is, omdat we niet gemakkelijk kunnen switchen naar een andere database of naar een gedistribueerde database.
 

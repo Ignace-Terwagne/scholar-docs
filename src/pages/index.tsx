@@ -46,7 +46,7 @@ export default function Home() {
     </p>
     <p>
       Merk je fouten op of heb je zelf dingen die je graag zou toevoegen? Open dan
-      gerust een <a href="https://github.com/ignace-terwagne/scholar-docs/issues">issue</a> en/of
+      gerust een <a href="https://github.com/ignace-terwagne/scholar-docs/issues">issue</a> en / of
       <a href="https://github.com/ignace-terwagne/scholar-docs/pulls">pull request</a> op GitHub.
     </p>
   </section>

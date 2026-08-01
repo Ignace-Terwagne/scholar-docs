@@ -452,7 +452,7 @@ Hierdoor wordt de waarde van `gebruiker` uit de `Kaart`-component automatisch do
 ### Event binding
 Event binding laat een component reageren op gebeurtenissen die plaatsvinden in de UI, zoals clicks, input of submit. Hiermee kan je functies in de component aanroepen wanneer een event plaatsvindt.
 
-De notatie is `(event)="handler($event)`
+De notatie is `(event)="handler($event)"`
 
 ```html
 <!-- src/app/kaart/kaart.html -->
@@ -610,7 +610,7 @@ import { FormsModule } from '@angular/forms';
 In Angular 20 is er een nieuwe manier om two-way binding te doen zonder `ngModel`. De oude methode met `ngModel` blijft echter nog steeds geldig, vooral handig bij eenvoudige formulieren of bij projecten die al veel `ngModel` gebruiken.
 :::
 ## 6. Control flow
-Sinds Angular 16 is er een nieuwe manier om control flow in templates te gebruiken. Dit maakt je HTML-logica duidelijker, overzichtelijker en minder foutgevoelig. met control flow bepaal je bijvoorbeeld welke elementen getoond worden of hoe lijsten worden herhaald, direct in de template.
+Sinds Angular 16 is er een nieuwe manier om control flow in templates te gebruiken. Dit maakt je HTML-logica duidelijker, overzichtelijker en minder foutgevoelig. Met control flow bepaal je bijvoorbeeld welke elementen getoond worden of hoe lijsten worden herhaald, direct in de template.
 
 De nieuwe control flow-syntax in Angular maakt templates declaratief en overzichtelijk, doordat de logica direct in de HTML staat. Dit houdt de code dicht bij de UI, verbetert de leesbaarheid en vermindert de kans op fouten. Bovendien vervangt het de oudere `*ngIf`, `*ngFor` en `*ngSwitch` syntax, waardoor de code consistenter en makkelijker te onderhouden is.
 
@@ -639,7 +639,7 @@ export class Kaart {
 ```
 Uitleg:
 - `gebruiker of gebruikers`: `gebruiker` is de tijdelijke variabele die verwijst naar elk item in de array `gebruikers`.
-- track `gebruiker.id`: Angular gebruikt deze `track`-key om efficiënt DOM-updates door te voeren. Als de array verandert (bijvoorbeeld een gebruiker wordt toegevoegd of verwijderd), weet Angular welk `<li>`-element behouden of verwijderd moet worden.
+- Track `gebruiker.id`: Angular gebruikt deze `track`-key om efficiënt DOM-updates door te voeren. Als de array verandert (bijvoorbeeld een gebruiker wordt toegevoegd of verwijderd), weet Angular welk `<li>`-element behouden of verwijderd moet worden.
 - Alles tussen de `{ ... }` wordt herhaald voor elk item. In dit voorbeeld wordt voor elke gebruiker een `<li>` aangemaakt dat de naam toont.
 
 ### Keuzes maken met `@switch`

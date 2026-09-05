@@ -87,8 +87,8 @@ export class TaskService {
 
 }
 ```
-:::Info
-We maken gebruik van het model `Task` in dit voorbeeld. Dit model. De invulling hiervan bepaal je zelf, afhankelijk van de data waarmee je wilt werken. Bijvoorbeeld:
+:::info
+We maken gebruik van het model `Task` in dit voorbeeld. De invulling hiervan bepaal je zelf, afhankelijk van de data waarmee je wilt werken. Bijvoorbeeld:
 ```typescript
 // src/app/models/task.model.ts
 export interface Task {
@@ -146,7 +146,7 @@ Wanneer een REST API strikt deze principes volgt, wordt het een "RESTful" API ge
 
 ### Testen van API's
 Een GET request kan je eenvoudig testen in je browser door de URL in te voeren. Je browser zal dan standaard een GET request uitvoeren en de response tonen.
-Voor andere HTTP-methoden zoals POST, PUT en DELETE kan je gebruik maken van tools zoals (Postman)[https://www.postman.com/] of (Insomnia)[https://insomnia.rest/]. Deze tools bieden een gebruiksvriendelijke interface om verschillende soorten HTTP-requests te maken, headers en body data toe te voegen, en de responses van de server te bekijken. Ze zijn onmisbaar voor het testen en debuggen van API's tijdens de ontwikkeling.
+Voor andere HTTP-methoden zoals POST, PUT en DELETE kan je gebruik maken van tools zoals [Postman](https://www.postman.com/) of [Insomnia](https://insomnia.rest/). Deze tools bieden een gebruiksvriendelijke interface om verschillende soorten HTTP-requests te maken, headers en body data toe te voegen, en de responses van de server te bekijken. Ze zijn onmisbaar voor het testen en debuggen van API's tijdens de ontwikkeling.
 
 Soms heb je geen optie om een grafische tool te gebruiken, bijvoorbeeld wanneer je werkt op een server zonder grafische interface. In dat geval kan je gebruik maken van command-line tools zoals `curl`. Bijvoorbeeld, om een POST request te maken met `curl`, kan je de volgende command gebruiken:
 ```bash
@@ -172,15 +172,13 @@ app.get('/api/tasks', (req, res) => {
 
 app.post('/api/tasks', (req, res) => {
     const newTask = req.body;
-
-}    tasks.push(newTask);
+    tasks.push(newTask);
     res.status(201).json(newTask);
 });
 
-
-
 app.listen(port, () => {
-    console.log ("server running on http://localhost:" + port);)
+    console.log("server running on http://localhost:" + port);
+});
 ```
 In dit voorbeeld maken we een eenvoudige Express-server die luistert op poort 3000. We hebben twee routes gedefinieerd: een GET route om alle taken op te halen en een POST route om een nieuwe taak toe te voegen. We gebruiken `express.json()` middleware om JSON request bodies te kunnen verwerken.
 
@@ -267,7 +265,7 @@ app.get('/api/tasks/:id', async (req, res, next) => {
 Deze error handling en validatie zorgt wel dat onze back-end veiliger wordt, maar het toont niet automatisch iets aan de gebruiker. We moeten er in de front-end ook voor zorgen dat we deze foutmeldingen opvangen en tonen aan de gebruiker, zodat deze weet wat er mis is gegaan en eventueel actie kan ondernemen.
 
 **Kort samengevat**: Validatie en error handling gebeuren zowel op front-end als back-end.
-- Op de front-end maken we gebruik van formulieren met validatie, knoppen die geactiveerd of gedeactiveerd worden op basis van de geldigheid van de data, en het tonen van foutmeldingen aan de gebruiker. De prmaire use-case hiervoor is de user experience verbeteren.
+- Op de front-end maken we gebruik van formulieren met validatie, knoppen die geactiveerd of gedeactiveerd worden op basis van de geldigheid van de data, en het tonen van foutmeldingen aan de gebruiker. De primaire use-case hiervoor is de user experience verbeteren.
 - Op de back-end valideren we alle binnenkomende data en sanitiseren we deze om beveiligingsrisico's te minimaliseren. We sturen passende foutmeldingen en HTTP-statuscodes terug naar de front-end wanneer iets misgaat. De primaire use-case hiervoor is de veiligheid en integriteit van de applicatie waarborgen.
 
 ## 8. NestJS
@@ -478,7 +476,7 @@ export interface Task {
     completed: boolean;
 }
 ```
-Hiervoor wordt geen stricte structuur opgelegd in NestJS. Sommigen gebruiken een bestand met `.interfaces.ts`, anderen maken in elke module een `interfaces`map aan. Je kunt zelf bepalen wat voor jou het beste werkt, zolang je maar consistent bent binnen je project.
+Hiervoor wordt geen stricte structuur opgelegd in NestJS. Sommigen gebruiken een bestand met `.interfaces.ts`, anderen maken in elke module een `interfaces` map aan. Je kunt zelf bepalen wat voor jou het beste werkt, zolang je maar consistent bent binnen je project.
 
 We kunnen nu methoden toevoegen aan de service om taken te beheren:
 ```typescript
@@ -784,7 +782,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   //highlight-next-line
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(process.env.PORT ?? 4000);
+  await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
 ```
@@ -832,7 +830,7 @@ export class TaskDto {
 ```
 We gebruiken hier de `@Exclude()` decorator om ervoor te zorgen dat standaard alle velden worden uitgesloten van de serialisatie. Vervolgens gebruiken we de `@Expose()` decorator om expliciet aan te geven welke velden we willen opnemen in de response.
 :::info
-Soms bevat een entity of model meer velden dan we willen terugsturen naar de client. Bijvoorbeeld een `User` entity kan een `password`veld bevatten. In dat geval willen we niet dat dit veld wordt teruggestuurd in de response. 
+Soms bevat een entity of model meer velden dan we willen terugsturen naar de client. Bijvoorbeeld een `User` entity kan een `password` veld bevatten. In dat geval willen we niet dat dit veld wordt teruggestuurd in de response. 
 We kunnen dit oplossen door gebruik te maken van de `@Exclude()`decorator op het veld dat we willen uitsluiten.
 ```typescript
 import { Exclude, Expose } from 'class-transformer';
@@ -1016,7 +1014,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   //highlight-start
   app.enableCors({
-    origin: ['http://localhost:4200']; // het domein van de front-end applicatie
+    origin: ['http://localhost:4200'] // het domein van de front-end applicatie
   })
   //highlight-end
   app.useGlobalPipes(new ValidationPipe());
@@ -1053,7 +1051,7 @@ MongoDB is een NoSQL-database die document-geörienteerd is. In plaats van tabel
 
 ### SQL vs NoSQL
 Voordat we verder ingaan op MongoDB, is het belangrijk om het verschil te begrijpen tussen relationele databases (SQL) en NoSQL-databases.
-Relationele databases, zoals MySQ L, PostgreSQL en SQLite, slaan data op in tabellen met rijen en kolommen. Ze gebruiken SQL (Structured Query Language) voor het beheren en opvragen van data. Relationele databases zijn zeer geschikt voor toepassingen waarbij de data-structuur goed gedefinieerd is en relaties tussen verschillende data-entiteiten belangrijk zijn.
+Relationele databases, zoals MySQL, PostgreSQL en SQLite, slaan data op in tabellen met rijen en kolommen. Ze gebruiken SQL (Structured Query Language) voor het beheren en opvragen van data. Relationele databases zijn zeer geschikt voor toepassingen waarbij de data-structuur goed gedefinieerd is en relaties tussen verschillende data-entiteiten belangrijk zijn.
 
 NoSQL (Not Only SQL) databases, zoals MongoDB, Cassandra en Redis, slaan data op in verschillende formaten, zoals documenten, key-value paren, grafen of kolom-georiënteerde opslag. Ze zijn ontworpen voor flexibiliteit en schaalbaarheid, en kunnen beter omgaan met grote hoeveelheden ongestructureerde of semi-gestructureerde data.
 Je kan het beste [deze vergelijking](https://www.mongodb.com/nosql-explained/nosql-vs-sql) raadplegen voor een diepgaandere uitleg over de verschillen tussen SQL en NoSQL databases.
@@ -1073,7 +1071,7 @@ Je kan het beste [deze vergelijking](https://www.mongodb.com/nosql-explained/nos
 - Bij sterk verbonden data met veel relaties, waar joins en foreign keys nodig zijn.
 
 ### Installatie
-Om MongoDB te gebruiken, moeten we eerst de MongoDB server installeren. Dit kan op verschillende manieren, afhankelijk van je besturingssysteem. De eenvoudigste manier is om MongoDB via Docker te draaien. Dit vereist dat je Docker op je machine hebt geïnstalleerd. Mocht je nog geen of minimale ervaring met docker hebben, is het aan te raden om de bare-metal  installatie te volgen.
+Om MongoDB te gebruiken, moeten we eerst de MongoDB server installeren. Dit kan op verschillende manieren, afhankelijk van je besturingssysteem. De eenvoudigste manier is om MongoDB via Docker te draaien. Dit vereist dat je Docker op je machine hebt geïnstalleerd. Mocht je nog geen of minimale ervaring met docker hebben, is het aan te raden om de bare-metal installatie te volgen.
 
 <Tabs>
     <TabItem value="docker" label="Docker">
@@ -1081,7 +1079,7 @@ Om MongoDB te gebruiken, moeten we eerst de MongoDB server installeren. Dit kan 
     Als je de standaard installatie volgt, draait MongoDB op poort `27017`. Deze heeft standaard geen volumes of authenticatie ingesteld, wat prima is voor lokale ontwikkeling, maar hou hier rekening mee. Dit wilt ook zeggen dat alle data verloren gaat wanneer je de container uitzet of verwijdert.
     Om de mongoDB toch persistent te maken, kan je het `run`-commando uitbreiden met een volume:
     ```bash
-    docker run -d -p 27017:27017 --name mongodb -v mongodb:/data/DB
+    docker run -d -p 27017:27017 --name mongodb -v mongodb:/data/db mongodb/mongodb-community-server
     ```
     Dit zorgt ervoor dat de data wordt opgeslagen in een Docker volume genaamd `mongodb`, waardoor de data behouden blijft, zelfs als de container wordt verwijderd.
     </TabItem>
@@ -1238,13 +1236,13 @@ We kunnen de Mongo Shell commando's niet rechtstreeks gebruiken in onze NestJS a
 De populairste ODM voor Node.js en NestJS is Mongoose. Mongoose biedt een schema-gebaseeerde oplossing om onze data-modellen te definiëren.
 
 :::info 
-We hebben eerder gezien dat MongoDB een flexibel schema heeft, en dus geen vaste structuur vereist voor documenten. Echter gaan we door Mongoose toch schema's definiëren. Dit is belangrijk, omdat we anders in de code niet weten welke velden we kunnen verwachten in de documenten. Het gebruik van deze schema's is ook niet noodzakelijk een beperking: in grotere toepassingen is het vaak wenselijk om een zekere mate van structuur en validatie te hebben op de data die we opslaan. Daarnaast kunnen we via Mongoose wel nog in zekere mate flexibele data oplsaan, zoals optionele velden of geneste documenten.
+We hebben eerder gezien dat MongoDB een flexibel schema heeft, en dus geen vaste structuur vereist voor documenten. Echter gaan we door Mongoose toch schema's definiëren. Dit is belangrijk, omdat we anders in de code niet weten welke velden we kunnen verwachten in de documenten. Het gebruik van deze schema's is ook niet noodzakelijk een beperking: in grotere toepassingen is het vaak wenselijk om een zekere mate van structuur en validatie te hebben op de data die we opslaan. Daarnaast kunnen we via Mongoose wel nog in zekere mate flexibele data opslaan, zoals optionele velden of geneste documenten.
 :::
 We installeren Mongoose via npm:
 ```bash
 npm install mongoose @nestjs/mongoose
 ```
-Vervolgens kunnen we Mongoose integreren in onze NestJS applicatie. We beginnen met het importeren van de `MongooseModule`in onze `AppModule`:
+Vervolgens kunnen we Mongoose integreren in onze NestJS applicatie. We beginnen met het importeren van de `MongooseModule` in onze `AppModule`:
 ```typescript
 // src/app.module.ts
 import { Module } from '@nestjs/common';
@@ -1263,7 +1261,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 })
 export class AppModule {}
 ```
-WE gebruiken hierin de `forRoot`methode van Mongoose. Hier geven we de database-string door om verbinding te maken met de MongoDB server. 
+We gebruiken hierin de `forRoot` methode van Mongoose. Hier geven we de database-string door om verbinding te maken met de MongoDB server. 
 :::info
 We gebruiken als database-string hier: 
 ```
@@ -1280,7 +1278,7 @@ mongodb://username:password@localhost:27017/todo-db
 ```
 :::
 
-We moeten nu starten met het definiëren van een schema voor onze taken. Voor de eenvoudigheid werken we voorlopig met één enkel schema. We maken een nieuwe map `schemas` aan in de `tasks`module:
+We moeten nu starten met het definiëren van een schema voor onze taken. Voor de eenvoudigheid werken we voorlopig met één enkel schema. We maken een nieuwe map `schemas` aan in de `tasks` module:
 ```typescript
 // src/tasks/schemas/task.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
@@ -1356,7 +1354,7 @@ We gebruiken de `MongooseModule.forFeature` methode om het `Task` schema te regi
 Als we nu nestjs al een keer starten, zal het automatisch de `todo-db` database aanmaken in MongoDB (indien deze nog niet bestaat). Daarnaast zal het ook een `tasks` collectie aanmaken op basis van het `Task` schema dat we hebben gedefinieerd.
 
 :::info
-Hoe weet Mongoose nu welke naam het moet gebruiken voor de collectie in de database? Standaard gebruikt Mongoose de meervoudsvorm van de modelnaam in kleine letters. In ons geval is de modelnaam `Task`, dus zal Mongoose automatisch de collectie `tasks`aanmaken. Dit kan je aanpassen door een derde parameter door te geven aan de `@Schema()` decorator, bijvoorbeeld:
+Hoe weet Mongoose nu welke naam het moet gebruiken voor de collectie in de database? Standaard gebruikt Mongoose de meervoudsvorm van de modelnaam in kleine letters. In ons geval is de modelnaam `Task`, dus zal Mongoose automatisch de collectie `tasks` aanmaken. Dit kan je aanpassen door een derde parameter door te geven aan de `@Schema()` decorator, bijvoorbeeld:
 ```typescript
 @Schema({ collection: 'my_custom_tasks' })
 ```
@@ -1389,10 +1387,10 @@ constructor(@InjectModel(Task.name) private taskModel: Model<Task>) {}
 }
 ```
 Merk op dat we hier enkele nieuwe concepten zien:
-- We hebben onze oorspronkelijke interface van `Task`vervangen door het `Task`model dat we hebben gedefinieerd met Mongoose. Aangezien dat dit een klasse is, kunnen we dit ook gebruiken als type in onze service.
+- We hebben onze oorspronkelijke interface van `Task` vervangen door het `Task` model dat we hebben gedefinieerd met Mongoose. Aangezien dat dit een klasse is, kunnen we dit ook gebruiken als type in onze service.
 - We injecteren het `Task` model in de constructor van de service met behulp van de `@InjectModel()` decorator. Dit maakt het mogelijk om het model te gebruiken om met de database te communiceren.
-- In de `createTask` methode maken we eeen nieuwe taak aan door een nieuwe instantie van het `taskModel` te maken en de `title` en `description` door te geven. We moeten `completed` niet doorgeven, omdat deze standaard op `false` staat.
-- Wanneer we `newTask.save()` dan aanroepen, gaat Mongoose de inhoud van de instantie overlopen en een nieuw document aanmaken in de `tasks`collectie van de `todo-db` database in MongoDB.
+- In de `createTask` methode maken we een nieuwe taak aan door een nieuwe instantie van het `taskModel` te maken en de `title` en `description` door te geven. We moeten `completed` niet doorgeven, omdat deze standaard op `false` staat.
+- Wanneer we `newTask.save()` dan aanroepen, gaat Mongoose de inhoud van de instantie overlopen en een nieuw document aanmaken in de `tasks` collectie van de `todo-db` database in MongoDB.
 
 De parameters van de `createTask` methode blijven hetzelfde, dus hoeven we in de controller niet aan te passen, maar merk op: we sturen nu een `Promise<Task>` terug in plaats van `Task`. Dit komt omdat Mongoose asynchroon werkt en we moeten wachten tot de database-operatie is voltooid voordat we het resultaat kunnen teruggeven.
 We moeten de controller dus ook aanpassen om hiermee om te gaan:
@@ -1430,7 +1428,7 @@ Als je de dto's hebt geïmplementeerd zoals eerder beschreven, zal je een respon
     "completed": false
 }
 ```
-Waarom zien we het `_id` veld niet terug? We hebbben in de dto eerder gedefinieerd dat we het`id` veld willen gebruiken, maar niet het `_id` veld. Wanneer we een term proberen te gebruiken die niet bestaat in de DTO, wordt deze automatisch weggelaten in de response. We kunnen dit oplossen door het `id`veld te vervangen door `_id` in de `TaskDto`:
+Waarom zien we het `_id` veld niet terug? We hebben in de dto eerder gedefinieerd dat we het `id` veld willen gebruiken, maar niet het `_id` veld. Wanneer we een term proberen te gebruiken die niet bestaat in de DTO, wordt deze automatisch weggelaten in de response. We kunnen dit oplossen door het `id` veld te vervangen door `_id` in de `TaskDto`:
 ```typescript
 // src/tasks/dto/task.dto.ts
 import { Exclude, Expose } from 'class-transformer';
@@ -1439,7 +1437,7 @@ import { Exclude, Expose } from 'class-transformer';
 export class TaskDto {
   @Expose()
   //highlight-next-line
-  readonly _id: number;
+  readonly _id: string;
 
   @Expose()
   readonly title: string;
@@ -1484,7 +1482,7 @@ todo-db> db.tasks.find()
 We zien hier inderdaad de twee taken terugkomen die we hebben aangemaakt via de API. Mongoose heeft automatisch het `_id` veld toegevoegd als unieke identificator voor elk document. Daarnaast heeft Mongoose ook een `__v` veld toegevoegd, wat de versie van het document bijhoudt. Dit is handig voor interne doeleinden, zoals bij het uitvoeren van updates.
 
 #### Read
-We kunnen nu de `getAllTasks`en `getTaskById` methoden implementeren in de service om taken op te halen uit de database:
+We kunnen nu de `getAllTasks` en `getTaskById` methoden implementeren in de service om taken op te halen uit de database:
 ```typescript
 // src/tasks/tasks.service.ts
 import { Injectable } from '@nestjs/common';
@@ -1553,7 +1551,7 @@ export class TasksController {
 //highlight-end
 }
 ```
-:::Info
+:::info
 Merk hier op dat de id van datatype is veranderd. We gebruiken hier `string` in plaats van `number`. Dit komt omdat het `_id` veld in MongoDB een `ObjectId` is, wat een 24-karakter hexadecimale string is. Daarom moeten we de id als string behandelen in onze code.
 :::
 Nu we dit hebben geïmplementeerd, kunnen we een GET-request sturen naar het `/tasks` endpoint om alle taken op te halen, en naar het `/tasks/:id` endpoint om een specifieke taak op te halen op basis van het `_id` veld.
@@ -1624,7 +1622,7 @@ In de controller passen we de `updateTask` methode aan om de update-operatie asy
     }
 ```
 :::info 
-Merk op dat we in de `updateTask`methode in de service gebruik hebben gemaakt van `Partial<Task>`, terwijl we in de controller een `UpdateTaskDto` gebruiken. We geven dus in dit geval alle wijzigbare velden door via de DTO. Dit is omdat we gebruik maken van een `PUT` endpoint. Een `PUT`request verwacht dat we het volledige object doorgeven, ook al zijn sommige velden ongewijzigd. 
+Merk op dat we in de `updateTask` methode in de service gebruik hebben gemaakt van `Partial<Task>`, terwijl we in de controller een `UpdateTaskDto` gebruiken. We geven dus in dit geval alle wijzigbare velden door via de DTO. Dit is omdat we gebruik maken van een `PUT` endpoint. Een `PUT` request verwacht dat we het volledige object doorgeven, ook al zijn sommige velden ongewijzigd. 
 
 Waarom gebruiken we dan `Partial<Task>` in de service? Dit is omdat we in de service niet willen afdwingen dat alle velden aanwezig zijn. Zo kunnen we de service ook hergebruiken voor andere doeleinden, zoals enkel het aanduiden dat een taak voltooid is, zonder de andere velden te hoeven doorgeven.
 
@@ -1723,6 +1721,7 @@ Vervolgens kunnen we een referentie naar de `User` opslaan in het `Task` schema:
 ```typescript
 // src/tasks/schemas/task.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import mongoose, { Types } from 'mongoose';
 import { User } from './user.schema';
 @Schema()
 export class Task {
@@ -1734,12 +1733,13 @@ export class Task {
     completed: boolean;
     //highlight-start
     @Prop({ type: mongoose.Schema.Types.ObjectId, ref: 'User' })
-    assignedTo: User;
+    assignedTo: Types.ObjectId | User;
     //highlight-end
 }
 export const TaskSchema = SchemaFactory.createForClass(Task);
 ```
 We definiëren een `assignedTo` veld in het `Task` schema als een referentie naar het `User` schema. We geven het type op als `mongoose.Schema.Types.ObjectId` en gebruiken de `ref` optie om aan te geven naar welk schema we verwijzen.
+Het TypeScript-type van `assignedTo` is `Types.ObjectId | User`: zolang de referentie niet expliciet gepopuleerd is (zie verderop), bevat het veld enkel een `ObjectId`; pas na populatie bevat het een volledig `User`-document.
 Nu kunnen we een gebruiker toewijzen aan een taak door het `_id` veld van de gebruiker op te slaan in het `assignedTo` veld:
 ```typescript
 const user = await this.userModel.findById(userId).exec();

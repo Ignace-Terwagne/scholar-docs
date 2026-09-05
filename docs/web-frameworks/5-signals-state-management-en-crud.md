@@ -86,9 +86,9 @@ count.set(5); // Wijzigt de waarde van count naar 5
 ```
 Een alleen-lezen signal kan niet direct worden aangepast. Het wordt vaak gebruikt om data te exposen zonder dat externe code deze kan wijzigen. Bijvoorbeeld:
 ```typescript
-import { signal, readonly } from '@angular/core';
+import { signal } from '@angular/core';
 const _count = signal(0);
-const count = readonly(_count); // Alleen-lezen versie van _count
+const count = _count.asReadonly(); // Alleen-lezen versie van _count
 ```
 Hier kan `count` niet worden aangepast buiten de module waar `_count` is gedefinieerd.
 Dit helpt om de integriteit van de data te waarborgen, zeker bij grotere applicaties. Zo ben je er zeker van dat bepaalde waarden alleen intern kunnen worden gewijzigd.
@@ -242,8 +242,8 @@ export class ProductList {
 import { inject, Component } from '@angular/core';
 import { CartStore } from '../../services/cart-store';
 export class Cart {
-  items = this.cartStore.items;
-    cartStore = inject(CartStore);
+    private cartStore = inject(CartStore);
+    items = this.cartStore.items;
     constructor() {}
     clearCart() {
         this.cartStore.clearItems();
@@ -255,17 +255,17 @@ export class Cart {
 <!-- src/app/components/cart/cart.html -->
 <h2>Winkelwagen</h2>
 <ul>
-    @for (let item of items(); let i = $index; track i) {
+    @for (item of items(); let i = $index; track i) {
         <li>{{ item }}</li>
     }
 </ul>
 <button (click)="clearCart()">Clear Cart</button>
 ```
 ```html
-// src/app/components/product-list/product-list.html
+<!-- src/app/components/product-list/product-list.html -->
 <h2>Producten</h2>
 <ul>
-    @for (let product of products; let i = $index; track i) {
+    @for (product of products; let i = $index; track i) {
         <li>{{ product }} <button (click)="addToCart(product)">Add to Cart</button></li>
     }
 </ul>
@@ -345,9 +345,6 @@ import { Injectable, signal, effect } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { inject } from '@angular/core';
-@Injectable({
-  providedIn: 'root',
-})
 
 interface Product {
     id: number;
@@ -357,6 +354,10 @@ interface Product {
     category: string;
     image: string;
 }
+
+@Injectable({
+  providedIn: 'root',
+})
 export class ProductStore {
     private _products = signal<any[]>([]);
     readonly products = this._products.asReadonly();
@@ -382,15 +383,15 @@ import { Component } from '@angular/core';
 import { ProductStore } from '../../services/product-store';
 import { inject } from '@angular/core';
 export class ProductList {
-    products = this.productStore.products;
     private productStore = inject(ProductStore);
+    products = this.productStore.products;
 }
 ```
 ```html
 <!-- src/app/components/product-list/product-list.html -->
 <h2>Producten</h2>
 <ul>
-    @for (let product of products(); let i = $index; track i) {
+    @for (product of products(); let i = $index; track i) {
         <li>{{ product.title }} - {{ product.price | currency }}</li>
     }
 </ul>

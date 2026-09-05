@@ -14,7 +14,7 @@ Vanaf versie 16 (2023) kreeg Angular een soort Renaissance met nieuwe mogelijkhe
 - Nieuwe template syntax (`@if`, `@for`): manieren om elementen op de pagina conditioneel of herhaald weer te geven.
 - Signals: een modern reactiviteitsmodel waarmee veranderingen in gegevens automatisch en efficiënt op het scherm worden bijgewerkt.
 
-Vandaag is Angular 20 (2024) een volledig ecosysteem met CLI, Material en RxJS. Het framework helpt ontwikkelaars om grote, onderhoudbare en schaalbare webapplicaties te bouwen.
+Vandaag is Angular 20 (2025) een volledig ecosysteem met CLI, Material en RxJS. Het framework helpt ontwikkelaars om grote, onderhoudbare en schaalbare webapplicaties te bouwen.
 
 ## 2. Tools en setup
 
@@ -110,7 +110,7 @@ http://localhost:4200
 ```
 
 Je ziet nu de standaardstartpagina van Angular.
-De ontwikkelserver vernieuwt automatisch wanneer je code aanpast — je hoeft de server dus niet opnieuw te starten.
+De ontwikkelserver vernieuwt automatisch wanneer je code aanpast, dus je hoeft de server niet opnieuw te starten.
 
 ## 3. Structuur van een Angular-applicatie
 
@@ -268,9 +268,9 @@ src/app/kaart/
 └── kaart.ts
 ```
 `kaart.css` is het styling bestand
-`kaart.html`is de template
-`kaart.spec.ts`is het testbestand
-`kaart.ts`is het typescript bestand met de logica.
+`kaart.html` is de template
+`kaart.spec.ts` is het testbestand
+`kaart.ts` is het typescript bestand met de logica.
 
 :::info
 In oudere Angular-versies werd bij het genereren van een component altijd .component. toegevoegd aan de bestandsnamen, bijvoorbeeld `kaart.component.ts`, `kaart.component.html` en `kaart.component.css`. Dit hielp om componentbestanden snel te herkennen en te onderscheiden van andere TypeScript- of CSS-bestanden.
@@ -329,8 +329,8 @@ Wanneer je deze component hebt geïmporteerd, kan je deze dan gebruiken, in de t
 <app-kaart></app-kaart>
 ```
 :::note
-Sinds Angular 17 worden standalone componenten de standaard en introduceert Angular nieuwe shorthand-velden zoals `styleUrl` en `templateUrl`.
-Deze vervangen de oudere arrays `styleUrls` en `templateUrls`, maar beide blijven geldig voor backwards compatibility.
+Sinds Angular 17 worden standalone componenten de standaard en introduceert Angular een nieuw shorthand-veld `styleUrl`.
+Dit vervangt de oudere array `styleUrls`, die wel geldig blijft voor backwards compatibility. `templateUrl` bestond altijd al als enkelvoudig veld en is ongewijzigd.
 :::
 
 ### Best practices
@@ -435,8 +435,6 @@ import { Profiel } from '../profiel/profiel';
   templateUrl: './kaart.html',
   styleUrl: './kaart.css',
 })
-
-// src/app/kaart/kaart.ts
 export class Kaart {
   gebruiker = "Alice";
   avatarUrl = "https://placehold.co/600x400";

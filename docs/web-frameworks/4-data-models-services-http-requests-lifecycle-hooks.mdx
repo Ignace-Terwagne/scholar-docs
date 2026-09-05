@@ -21,7 +21,7 @@ export interface User {
 In dit voorbeeld definieert de `User` interface een data model met drie eigenschappen: `id`, `name` en `email`. Door dit model te gebruiken, weet je zeker dat de data die je verwerkt aan deze structuur voldoet.
 
 ### Waarom data modellen gebruiken?
-Door data modellen te gebruiken, krijg je een duidelijke structuur. Fouten worden bij compilatie al opgespoord, ten opzichte van runtime, Autocompletion in je IDE wordt beter en je code wordt leesbaarder en onderhoudbaarder.
+Door data modellen te gebruiken, krijg je een duidelijke structuur. Fouten worden bij compilatie al opgespoord in plaats van pas tijdens runtime, autocompletion in je IDE wordt beter en je code wordt leesbaarder en onderhoudbaarder.
 
 <Tabs>
 <TabItem value="met data model" label="met data model">
@@ -267,8 +267,8 @@ In de html template van `CartView` kunnen we de items in de winkelwagen weergeve
 In Angular worden HTTP-requests uitgevoerd met de `HttpClient` service, die deel uitmaakt van het `@angular/common/http` pakket. Hiermee kun je eenvoudig communiceren met backend-API's om data op te halen of te verzenden.
 We gebruiken een publieke API als voorbeeld: https://fakestoreapi.com
 
-### HTTPClientModule importeren
-Om `HttpClient` te gebruiken, moet je eerst de `provideHTTPClient` toevoegen aan `app.config.ts`;
+### HttpClient importeren
+Om `HttpClient` te gebruiken, moet je eerst de `provideHttpClient` toevoegen aan `app.config.ts`;
 ```typescript
 // src/app/app.config.ts
 import { ApplicationConfig, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
@@ -287,7 +287,7 @@ export const appConfig: ApplicationConfig = {
   ]
 };
 ```
-Nu is `HTTPClient` beschikbaar voor injectie in je services en componenten.
+Nu is `HttpClient` beschikbaar voor injectie in je services en componenten.
 
 ### Een HTTP-service maken
 Laten we een service maken die producten ophaalt van de Fake Store API:
@@ -302,7 +302,7 @@ import { Observable } from 'rxjs';
 })
 export class ProductService {
   private apiUrl = 'https://fakestoreapi.com/products';
-  private http = inject(HTTPClient)
+  private http = inject(HttpClient)
 
   getProducts(): Observable<Product[]> {
     return this.http.get<Product[]>(this.apiUrl);
@@ -311,8 +311,8 @@ export class ProductService {
 ```
 De `getProducts` methode maakt een GET-request naar de API en retourneert een Observable die een array van producten bevat.
 
-:::Note
-Merk op: In dit voorbeed is de `string` van eerder vervangen door een `Product` model. Dit is een goed voorbeeld van hoe data modellen kunnen worden gebruikt in combinatie met HTTP-requests om typeveiligheid te garanderen.
+:::note
+Merk op: In dit voorbeeld is de `string` van eerder vervangen door een `Product` model. Dit is een goed voorbeeld van hoe data modellen kunnen worden gebruikt in combinatie met HTTP-requests om typeveiligheid te garanderen.
 ```ts
 // src/app/models/product.model.ts
 export interface Product {
@@ -383,7 +383,7 @@ export class ProductList {
 In de constructor van `ProductList` subscriben we op de Observable die wordt geretourneerd door `getProducts`. Wanneer de data beschikbaar is, wijzen we deze toe aan de `products` array.
 
 ### unsubscribe
-Het is belangrijk om te onthouden dat je moet unsubscriben van Observables om geheugenlekken te voorkomen. In analagoie met de nieuwsbrief, als je je niet afmeldt, blijf je de nieuwsbrieven ontvangen, zelfs als je ze niet meer wilt lezen.
+Het is belangrijk om te onthouden dat je moet unsubscriben van Observables om geheugenlekken te voorkomen. In analogie met de nieuwsbrief, als je je niet afmeldt, blijf je de nieuwsbrieven ontvangen, zelfs als je ze niet meer wilt lezen.
 In Angular componenten kunnen we dit doen als volgt:
 ```typescript
 // src/app/product-list/product-list.ts
@@ -422,19 +422,8 @@ export class ProductList {
 
 Zoals je hierboven ziet, slaan we de subscription op in een variabele `productSubscription`. In de `ngOnDestroy` lifecycle hook roepen we `unsubscribe` aan om ons af te melden van de Observable wanneer de component wordt vernietigd. (*We bespreken lifecycle hooks later in dit hoofdstuk.*)
 
-Dit zorgt echter voor veel boilerplate code. Gelukkig biedt Angular een eenvoudigere manier om dit te doen met de `async` pipe in templates, die automatisch unsubscribet wanneer de component wordt vernietigd. We zullen dit later in het hoofdstuk over templates behandelen.
+Dit zorgt echter voor veel boilerplate code. Gelukkig biedt Angular een eenvoudigere manier om dit te doen met de `async` pipe in templates, die automatisch unsubscribet wanneer de component wordt vernietigd.
 
-```html
-<!-- src/app/product-list/product-list.html -->
-<ul>
-    @for (product of products | async; let i = $index; track i) {
-        <li>
-            <h3>{{ product.title }}</h3>
-            <button (click)="addToCart(product)">Add to Cart</button>
-        </li>
-    }
-</ul>
-```
 Hiervoor moeten we in de component `products` de `AsyncPipe` importeren en de `getProducts` Observable direct toewijzen:
 ```typescript
 // src/app/product-list/product-list.ts
@@ -466,6 +455,17 @@ export class ProductList {
   }
 
 }
+```
+```html
+<!-- src/app/product-list/product-list.html -->
+<ul>
+    @for (product of (products | async); let i = $index; track i) {
+        <li>
+            <h3>{{ product.title }}</h3>
+            <button (click)="addToCart(product)">Add to Cart</button>
+        </li>
+    }
+</ul>
 ```
 In dit voorbeeld gebruiken we de `async` pipe in de template om automatisch te subscriben op de `products` Observable. Hierdoor hoeven we ons geen zorgen te maken over het handmatig unsubscriben, omdat de `async` pipe dit voor ons afhandelt wanneer de component wordt vernietigd.
 
@@ -569,7 +569,7 @@ In dit voorbeeld implementeren we de `OnInit` interface en definiëren we de `ng
 De `ngOnDestroy` hook wordt aangeroepen vlak voordat een component wordt vernietigd. Dit is een goede plek om opruimwerkzaamheden uit te voeren, zoals het unsubscriben van Observables of het verwijderen van event listeners.
 ```typescript
 // src/app/product-list/product-list.ts
-import { inject, Component, onDestroy } from '@angular/core';
+import { inject, Component, OnDestroy } from '@angular/core';
 import { CartService } from '../services/cart';
 import { ProductService } from '../services/product';
 import { Product } from '../models/product.model';
@@ -614,10 +614,9 @@ import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
 
 @Component({
   selector: 'app-profiel',
-  template: 'profiel.html',
-  styleUrl: 'profiel.css',
+  templateUrl: './profiel.html',
+  styleUrl: './profiel.css',
 })
-
 export class ProfielComponent implements OnChanges {
   @Input() userId: number = 0;
 

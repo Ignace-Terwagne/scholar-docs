@@ -62,7 +62,7 @@ Uitleg:
 - Property binding `[src]="avatarUrl"` en `[alt]="gebruiker"` zorgt ervoor dat het `<img>`-element automatisch de juiste waarden krijgt.
 
 ### Event van child naar parent: `@Output`
-Met `@Output()` kan een childcomponent een event "uitsturen" naar de parent. Zo kan het child bijvoorbeeld een actie melden of data terugsturen wanneer er iets gebeurd.
+Met `@Output()` kan een childcomponent een event "uitsturen" naar de parent. Zo kan het child bijvoorbeeld een actie melden of data terugsturen wanneer er iets gebeurt.
 ```ts
 // src/app/profiel/profiel.ts
 import { Component, Output, EventEmitter } from '@angular/core';
@@ -126,7 +126,7 @@ Angular doet dit door:
 - Een `@Input()` te gebruiken voor de huidige waarde
 - Een `@Output()[naam]Change` te gebruiken voor de wijzigingen
 - De parent gebruikt `[(naam)]="property"` voor automatische synchronisatie
-Dit patroon vervangt dus de handmatige combinatie van `[property]` en `(propertyChanged)` waarbij property binding en event binding apart gekoppeld moeten worden..
+Dit patroon vervangt dus de handmatige combinatie van `[property]` en `(propertyChanged)` waarbij property binding en event binding apart gekoppeld moeten worden.
 
 ```ts
 // src/app/profiel/profiel.ts
@@ -300,7 +300,7 @@ Uitleg:
 - Dankzij Angular’s reactiviteit wordt de UI automatisch bijgewerkt met de nieuwe naam.
 
 ## 2. Routing in Angular 20
-Angular-apps zijn **Single Page Applications (SPA).**. Dat betekent dat er één HTML-pagina geladen wordt en dat de content dynamisch wordt aangepast zonder dat de pagina volledig herladen wordt. Routing in Angular is het mechanisme waarmee je verschillende componenten toont op basis van de URL. De Router beheert hiervoor twee dingen: welke component gekoppeld zijn aan welke routes en hoe je navigeert tussen deze componenten.
+Angular-apps zijn **Single Page Applications (SPA)**. Dat betekent dat er één HTML-pagina geladen wordt en dat de content dynamisch wordt aangepast zonder dat de pagina volledig herladen wordt. Routing in Angular is het mechanisme waarmee je verschillende componenten toont op basis van de URL. De Router beheert hiervoor twee dingen: welke component gekoppeld zijn aan welke routes en hoe je navigeert tussen deze componenten.
 
 Routing bestaat uit drie belangrijke onderdelen in de code:
 - Routes definiëren in `app.routes.ts`
@@ -418,7 +418,7 @@ Dat doe je door in het pad `/:parameter` te gebruiken.
 Wanneer iemand naar `/profiel/15` gaat, wordt 15 doorgegeven als parameter aan het `Profiel`-component. het component kan dan zelf bepalen wat het met die id doet.
 
 #### Uitlezen in de component
-We kunnen route parameters uitlezen via de `ActivatedRoute`. Elke keer als de parameter verandert — bijvoorbeeld wanneer de gebruiker navigeert naar een ander profiel — zal de `params`-observable een nieuwe waarde doorgeven.
+We kunnen route parameters uitlezen via de `ActivatedRoute`. Elke keer als de parameter verandert (bijvoorbeeld wanneer de gebruiker navigeert naar een ander profiel) zal de `params`-observable een nieuwe waarde doorgeven.
 ```ts
 // src/app/profiel/profiel.ts
 import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
@@ -698,8 +698,8 @@ Een `CanDeactivate` guard voorkomt dat een gebruiker een component verlaat zonde
   <TabItem value="function-based" label="Function-based guard" default>
   ```ts
   // src/app/guards/unsaved-changes-guard.ts
-  import { CanActivateFn } from '@angular/router';
-  export const unsavedChangesGuard: CanActivateFn = (route, state) => {
+  import { CanDeactivateFn } from '@angular/router';
+  export const unsavedChangesGuard: CanDeactivateFn<unknown> = (component, route, state) => {
       const unSavedChanges = true; // Hier check je of er niet-opgeslagen wijzigingen zijn
       if (unSavedChanges) {
         // Waarschuw de gebruiker
@@ -1146,7 +1146,8 @@ Je kunt deze pipe nu gebruiken in je templates:
 ```
 
 Een tweede voorbeeld van een custom pipe is een formatter voor IBAN-nummers:
-```ts// src/app/pipes/iban-pipe.ts
+```ts
+// src/app/pipes/iban-pipe.ts
 import { Pipe, PipeTransform } from '@angular/core';
 @Pipe({
   name: 'iban'
@@ -1154,8 +1155,8 @@ import { Pipe, PipeTransform } from '@angular/core';
 export class IbanPipe implements PipeTransform {
   transform(value: string): string {
     if (!value) return value;
-    return iban.replace(/\s+/g, '').match(/.{1,4}/g)?.join(' ') || value;
-}
+    return value.replace(/\s+/g, '').match(/.{1,4}/g)?.join(' ') || value;
+  }
 }
 ```
 Uitleg:

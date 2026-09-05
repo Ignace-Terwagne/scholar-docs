@@ -376,7 +376,7 @@ export class ProductList {
 
   addToCart(product: Product) {
     this.cartService.addItem(product);
-    console.log(`${product} added to cart.`);
+    console.log(`${product.title} added to cart.`);
   }
 }
 ```
@@ -412,7 +412,7 @@ export class ProductList {
 
   addToCart(product: Product) {
     this.cartService.addItem(product);
-    console.log(`${product} added to cart.`);
+    console.log(`${product.title} added to cart.`);
   }
   ngOnDestroy() {
     this.productSubscription.unsubscribe();
@@ -595,7 +595,7 @@ export class ProductList implements OnDestroy {
 
   addToCart(product: Product) {
     this.cartService.addItem(product);
-    console.log(`${product} added to cart.`);
+    console.log(`${product.title} added to cart.`);
   }
 
   // highlight-start

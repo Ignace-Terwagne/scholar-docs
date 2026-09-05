@@ -418,10 +418,10 @@ Dat doe je door in het pad `/:parameter` te gebruiken.
 Wanneer iemand naar `/profiel/15` gaat, wordt 15 doorgegeven als parameter aan het `Profiel`-component. het component kan dan zelf bepalen wat het met die id doet.
 
 #### Uitlezen in de component
-We kunnen route parameters uitlezen via de `ActivatedRoute`. Elke keer als de parameter verandert (bijvoorbeeld wanneer de gebruiker navigeert naar een ander profiel) zal de `params`-observable een nieuwe waarde doorgeven.
+We kunnen route parameters uitlezen via de `ActivatedRoute`. Elke keer als de parameter verandert (bijvoorbeeld wanneer de gebruiker navigeert naar een ander profiel) zal de `paramMap`-observable een nieuwe waarde doorgeven.
 ```ts
 // src/app/profiel/profiel.ts
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 
 @Component({
@@ -431,7 +431,7 @@ import { ActivatedRoute } from '@angular/router';
 export class Profiel  {
   profielId: string | null = null;
   constructor(private route: ActivatedRoute) {
-    this.route.params.subscribe(p => {
+    this.route.paramMap.subscribe(p => {
       // Hier kan je beschrijven wat er moet gebeuren met de id parameter
       this.profielId = p.get('id');
     })

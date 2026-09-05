@@ -782,7 +782,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   //highlight-next-line
   app.useGlobalPipes(new ValidationPipe());
-  await app.listen(process.env.PORT ?? 4000);
+  await app.listen(process.env.PORT ?? 3000);
 }
 bootstrap();
 ```
@@ -1437,7 +1437,7 @@ import { Exclude, Expose } from 'class-transformer';
 export class TaskDto {
   @Expose()
   //highlight-next-line
-  readonly _id: number;
+  readonly _id: string;
 
   @Expose()
   readonly title: string;
